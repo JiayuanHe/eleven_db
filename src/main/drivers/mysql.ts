@@ -149,6 +149,21 @@ export class MysqlDriver implements ConnectionDriver {
     };
   }
 
+  async fetchAll(options: { database?: string; table: string; where?: string }): Promise<QueryResult> {
+    const start = Date.now();
+    const where = options.where ? `WHERE ${options.where}` : '';
+    const sql = `SELECT * FROM \`${options.database ?? this.cfg.database}\`.\`${options.table}\` ${where}`;
+    const [rowsRes] = await this.getPool().query<any[]>(sql);
+    const flat = rowsRes as unknown as RowDataPacket[];
+    const cols = flat.length > 0 ? Object.keys(flat[0]).map((k) => ({ name: k, type: '' })) : [];
+    return {
+      columns: cols,
+      rows: flat as unknown as Record<string, unknown>[],
+      elapsedMs: Date.now() - start,
+      affectedRows: flat.length,
+    };
+  }
+
   async execute(sql: string): Promise<QueryResult> {
     const start = Date.now();
     // 简化：多条语句拆开逐条执行，最后合并

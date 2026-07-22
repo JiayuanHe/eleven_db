@@ -62,6 +62,9 @@ export interface ConnectionDriver {
 
   fetchData(options: FetchDataOptions): Promise<QueryResult>;
 
+  /** 导出全部数据（无分页） */
+  fetchAll(options: { database?: string; table: string; where?: string }): Promise<QueryResult>;
+
   /** 执行任意 SQL；多条以 ; 分隔时按条返回（影响行数取最后一条） */
   execute(sql: string): Promise<QueryResult>;
 

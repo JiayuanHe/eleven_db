@@ -325,9 +325,12 @@ input::placeholder { color: var(--muted); }
 .result-area { display: flex; flex-direction: column; min-height: 0; }
 .result-toolbar {
   display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-  padding: 6px 10px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  padding: 4px 8px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
   background: var(--bg-1);
 }
+.result-toolbar button { padding: 2px 6px; font-size: 11px; }
+.result-toolbar button.primary { padding: 2px 8px; }
+.result-toolbar select { padding: 1px 4px; font-size: 11px; }
 
 /* ===== Result table ===== */
 .result-table { display: flex; flex-direction: column; flex: 1; min-height: 0; }
@@ -346,6 +349,28 @@ input::placeholder { color: var(--muted); }
 .result-table th.pk { color: var(--pk); }
 .result-table tr.dirty td { background: rgba(77, 131, 224, 0.12); }
 .result-table td .null { color: var(--muted); font-style: italic; }
+.result-table td .cell-input {
+  width: 100%; box-sizing: border-box; padding: 1px 4px;
+  font-size: 12px; font-family: inherit;
+  background: var(--bg-1); border: 1px solid var(--accent);
+  color: var(--text); border-radius: 2px;
+}
+
+/* ===== Export dropdown ===== */
+.sql-db-label { font-size: 11px; color: var(--muted); margin-left: 4px; }
+.export-dropdown {
+  display: block;
+  position: absolute; top: 100%; left: 0; z-index: 50;
+  background: var(--bg-1); border: 1px solid var(--line);
+  border-radius: 4px; min-width: 130px;
+  box-shadow: var(--shadow); font-size: 11px;
+}
+.export-dropdown button {
+  display: block; width: 100%; text-align: left;
+  background: transparent; border: 0; border-radius: 0;
+  padding: 5px 10px; cursor: pointer; font-size: 11px;
+}
+.export-dropdown button:hover { background: var(--accent-2); color: #fff; }
 .result-table .select-col {
   width: 32px;
   text-align: center;
@@ -375,17 +400,20 @@ input::placeholder { color: var(--muted); }
 /* ===== Table browser ===== */
 .table-browser { display: grid; grid-template-rows: auto 1fr 24px; height: 100%; min-height: 0; }
 .tb-toolbar {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  padding: 6px 10px; border-bottom: 1px solid var(--line); background: var(--bg-1);
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  padding: 4px 8px; border-bottom: 1px solid var(--line); background: var(--bg-1);
 }
-.tb-toolbar h3 { margin: 0; font-size: 13px; min-width: 120px; }
-.tb-toolbar .filter { flex: 1; min-width: 160px; }
+.tb-toolbar > * { flex-shrink: 0; }
+.tb-toolbar button { padding: 2px 6px; font-size: 11px; }
+.tb-toolbar button.primary { padding: 2px 8px; }
+.tb-toolbar .export-wrap { position: relative; display: inline-flex; align-items: center; }
+.tb-toolbar .export-wrap > button { padding: 2px 6px; font-size: 11px; white-space: nowrap; }
 .tb-toolbar .filter-advanced {
   flex: 0 1 100%; display: flex; gap: 6px; align-items: center;
-  padding: 6px; margin-top: 4px; border-top: 1px dashed var(--line);
+  padding: 4px; margin-top: 2px; border-top: 1px dashed var(--line);
 }
 .tb-toolbar .filter-advanced select,
-.tb-toolbar .filter-advanced input { font-size: 12px; }
+.tb-toolbar .filter-advanced input { font-size: 11px; }
 .tb-toolbar .filter-advanced input { flex: 1; min-width: 100px; }
 .tb-toolbar .filter-conditions {
   flex: 0 1 100%; display: flex; flex-direction: column; gap: 4px;

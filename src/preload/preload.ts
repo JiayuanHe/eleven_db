@@ -69,6 +69,13 @@ const api = {
       rows: any[];
       password?: string;
     }) => invoke<QueryResult>(IPC.table.commit, args),
+    exportAll: (args: {
+      id: string;
+      database: string;
+      table: string;
+      where?: string;
+      password?: string;
+    }) => invoke<QueryResult>(IPC.table.exportAll, args),
   },
   redis: {
     listDatabases: (id: string, password?: string) =>

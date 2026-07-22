@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import type { ConnectionConfig, QueryResult } from '../../shared/types';
+import type { ConnectionConfig, QueryResult, SchemaObject } from '../../shared/types';
 import { call, toast } from '../lib/api';
 import { SqlEditor } from '../components/SqlEditor';
 import { ResultTable } from '../components/ResultTable';
 import { toCsv } from '../lib/csv';
+import { formatSql } from '../lib/sqlFormat';
 
 /**
  * SQL 编辑器视图：
  * - 多 Tab 暂存，每个 Tab 独立保存状态
  * - Ctrl/Cmd + Enter 执行
+ * - 数据库选择 + 表/列补全
  * - 结果展示 ResultTable
  */
 
@@ -28,6 +30,11 @@ interface Props {
   initialSql?: string;
 }
 
+interface TableCompletion {
+  name: string;
+  columns: string[];
+}
+
 export function SqlConsole(props: Props): JSX.Element {
   const [tabs, setTabs] = useState<Tab[]>(() => {
     const init = props.initialSql ?? '';
@@ -35,7 +42,38 @@ export function SqlConsole(props: Props): JSX.Element {
   });
   const [activeId, setActiveId] = useState('1');
 
+  const [schemas, setSchemas] = useState<string[]>([]);
+  const [selectedDb, setSelectedDb] = useState<string>('');
+  const [completions, setCompletions] = useState<{ tables: TableCompletion[] }>({ tables: [] });
+
   const active = tabs.find((t) => t.id === activeId)!;
+
+  // 加载数据库列表（listObjects 不带 database 参数走 SHOW DATABASES）
+  useEffect(() => {
+    setSchemas([]);
+    setSelectedDb('');
+    setCompletions({ tables: [] });
+    call<SchemaObject[]>(window.api.conn.listObjects(props.conn.id, undefined)).then((dbs) => {
+      const names = dbs.map((d) => d.name);
+      setSchemas(names);
+      if (names.length > 0) setSelectedDb(names[0]);
+    }).catch(() => {});
+  }, [props.conn.id]);
+
+  // 加载选中数据库的表补全
+  useEffect(() => {
+    if (!selectedDb) return;
+    setCompletions({ tables: [] });
+    call<SchemaObject[]>(window.api.conn.listObjects(props.conn.id, selectedDb)).then((tables) => {
+      Promise.all(
+        tables.map((t) =>
+          call<any[]>(window.api.table.schema(props.conn.id, selectedDb, t.name))
+            .then((cols) => ({ name: t.name, columns: cols.map((c: any) => c.name) }))
+            .catch(() => ({ name: t.name, columns: [] as string[] }))
+        )
+      ).then((result) => setCompletions({ tables: result }));
+    }).catch(() => {});
+  }, [props.conn.id, selectedDb]);
 
   const setTabState = (id: string, patch: Partial<Tab>) => {
     setTabs((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)));
@@ -59,7 +97,10 @@ export function SqlConsole(props: Props): JSX.Element {
     if (!sql.trim()) return;
     setTabState(id, { loading: true, error: null });
     try {
-      const r = await call<QueryResult>(window.api.sql.execute(props.conn.id, sql));
+      const actualSql = selectedDb && selectedDb !== props.conn.database
+        ? `USE \`${selectedDb}\`;\n${sql.trim()}`
+        : sql.trim();
+      const r = await call<QueryResult>(window.api.sql.execute(props.conn.id, actualSql));
       setTabState(id, { result: r, loading: false, elapsedMs: r.elapsedMs });
     } catch (e) {
       setTabState(id, { error: (e as Error).message, loading: false });
@@ -110,10 +151,21 @@ export function SqlConsole(props: Props): JSX.Element {
           value={active.sql}
           onChange={(v) => setTabState(activeId, { sql: v })}
           onRun={() => run(activeId, active.sql)}
+          completions={completions}
         />
       </div>
       <div className="result-area">
         <div className="result-toolbar">
+          <span className="sql-db-label">库：</span>
+          <select
+            value={selectedDb}
+            onChange={(e) => setSelectedDb(e.target.value)}
+            style={{ fontSize: 11, padding: '1px 4px' }}
+          >
+            {schemas.map((db) => (
+              <option key={db} value={db}>{db}</option>
+            ))}
+          </select>
           <button
             className="primary"
             onClick={() => run(activeId, active.sql)}
@@ -127,6 +179,14 @@ export function SqlConsole(props: Props): JSX.Element {
             </span>
           )}
           <button onClick={() => active && exportCsv(active)}>导出 CSV</button>
+          <button
+            onClick={() => {
+              const formatted = formatSql(active.sql);
+              setTabState(activeId, { sql: formatted });
+            }}
+          >
+            格式化
+          </button>
         </div>
         {active.error ? (
           <pre className="error">{active.error}</pre>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { ConnectionConfig } from '../../shared/types';
+import type { ConnectionConfig, SchemaObject } from '../../shared/types';
 import { ConnectionTree, ConnectionStatus } from '../components/ConnectionTree';
 import { ConnectionEditor } from '../components/ConnectionEditor';
 import { SchemaTree } from '../components/SchemaTree';
@@ -7,7 +7,7 @@ import { ResizeHandle } from '../components/ResizeHandle';
 import { SqlConsole } from './SqlConsole';
 import { TableBrowser } from './TableBrowser';
 import { RedisBrowser } from './RedisBrowser';
-import { toast } from '../lib/api';
+import { toast, call } from '../lib/api';
 import { useTheme } from '../lib/theme';
 import { useLayout } from '../lib/layout';
 
@@ -164,13 +164,11 @@ export function App(): JSX.Element {
               <ConnectionTree
                 activeId={conn?.id ?? null}
                 onSelect={async (id) => {
-                  const cfgRes = await window.api.conn.get(id);
-                  if (cfgRes.ok && cfgRes.data) {
-                    setConn(cfgRes.data);
-                    setConnStatus(id, 'connecting');
-                    const ping = await window.api.conn.listObjects(id);
-                    setConnStatus(id, ping.ok ? 'ok' : 'error');
-                  }
+                  const cfg = await call<ConnectionConfig>(window.api.conn.get(id));
+                  setConn(cfg);
+                  setConnStatus(id, 'connecting');
+                  const ping = await call<SchemaObject[]>(window.api.conn.listObjects(id));
+                  setConnStatus(id, Array.isArray(ping) ? 'ok' : 'error');
                 }}
                 onEdit={(c) => setEditing(c)}
                 refreshKey={refreshKey}

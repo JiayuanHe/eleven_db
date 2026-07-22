@@ -50,14 +50,70 @@ export interface SqlEditorProps {
   language?: 'mysql';
   height?: number | string;
   onRun?: () => void;
+  /** SQL 补全数据：{ tables: { name, columns: string[] }[] } */
+  completions?: { tables: { name: string; columns: string[] }[] };
 }
 
 export function SqlEditor(props: SqlEditorProps): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const completionsRef = useRef(props.completions);
+
+  useEffect(() => {
+    completionsRef.current = props.completions;
+  }, [props.completions]);
 
   useEffect(() => {
     ensureMonaco();
+
+    const completionProvider = monaco.languages.registerCompletionItemProvider('mysql', {
+      triggerCharacters: [' ', '.', '('],
+      provideCompletionItems: (_model, position) => {
+        const lineContent = _model.getLineContent(position.lineNumber);
+        const textBefore = lineContent.substring(0, position.column - 1).toUpperCase();
+
+        const comp = completionsRef.current;
+        if (!comp?.tables.length) return { suggestions: [] };
+
+        const suggestions: monaco.languages.CompletionItem[] = [];
+
+        // 表名补全
+        const lastWord = /[\w`]+$/.exec(lineContent.substring(0, position.column - 1))?.[0] ?? '';
+        for (const t of comp.tables) {
+          if (t.name.toUpperCase().includes(lastWord.toUpperCase())) {
+            suggestions.push({
+              label: t.name,
+              kind: monaco.languages.CompletionItemKind.Class,
+              insertText: `\`${t.name}\``,
+              range: {
+                startLineNumber: position.lineNumber,
+                startColumn: position.column - lastWord.length,
+                endLineNumber: position.lineNumber,
+                endColumn: position.column,
+              },
+            });
+            // 列名补全
+            for (const col of t.columns) {
+              if (col.toUpperCase().includes(lastWord.toUpperCase())) {
+                suggestions.push({
+                  label: col,
+                  kind: monaco.languages.CompletionItemKind.Field,
+                  insertText: col,
+                  range: {
+                    startLineNumber: position.lineNumber,
+                    startColumn: position.column - lastWord.length,
+                    endLineNumber: position.lineNumber,
+                    endColumn: position.column,
+                  },
+                });
+              }
+            }
+          }
+        }
+        return { suggestions };
+      },
+    });
+
     if (!ref.current) return;
 
     const editor = monaco.editor.create(ref.current, {
@@ -87,6 +143,7 @@ export function SqlEditor(props: SqlEditorProps): JSX.Element {
     return () => {
       sub.dispose();
       editor.dispose();
+      completionProvider.dispose();
       editorRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

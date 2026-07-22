@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { TableColumn as ColDef } from '../../shared/types';
 
 /**
@@ -50,6 +50,8 @@ interface Props {
   /** 新增 / 待插入行（顶部） */
   pendingInserts?: PendingRow[];
   onPendingInsertCell?: (rowIndex: number, column: string, newValue: unknown) => void;
+  /** 编辑模式：单元格渲染为 input，可直接修改后提交 */
+  editing?: boolean;
 }
 
 export function ResultTable(props: Props): JSX.Element {
@@ -67,11 +69,35 @@ export function ResultTable(props: Props): JSX.Element {
     onSelectAll,
     pendingInserts,
     onPendingInsertCell,
+    editing,
   } = props;
 
   const pkSet = useMemo(() => new Set(primaryKeys ?? []), [primaryKeys]);
   const inserts = pendingInserts ?? [];
   const allSelected = rows.length > 0 && selected && selected.size === rows.length;
+
+  // 当前正在内联编辑的单元格
+  const [localEdit, setLocalEdit] = useState<{ rowIndex: number; column: string; value: string } | null>(null);
+  // 新增行的内联编辑状态
+  const [localInsertEdit, setLocalInsertEdit] = useState<{ rowIndex: number; column: string; value: string } | null>(null);
+
+  const commitLocalEdit = (rowIndex: number, column: string, value: string) => {
+    const raw = value === '' ? null : value;
+    onCellChange?.(rowIndex, column, raw);
+    setLocalEdit(null);
+  };
+
+  const commitLocalInsertEdit = (rowIndex: number, column: string, value: string) => {
+    const raw = value === '' ? null : value;
+    onPendingInsertCell?.(rowIndex, column, raw);
+    setLocalInsertEdit(null);
+  };
+
+  const isLocalEditing = (rowIndex: number, column: string) =>
+    localEdit?.rowIndex === rowIndex && localEdit?.column === column;
+
+  const isLocalInsertEditing = (rowIndex: number, column: string) =>
+    localInsertEdit?.rowIndex === rowIndex && localInsertEdit?.column === column;
 
   if (loading) return <div className="empty">执行中…</div>;
   if (error) return <pre className="error">{error}</pre>;
@@ -107,15 +133,29 @@ export function ResultTable(props: Props): JSX.Element {
                 </td>
                 {columns.map((c) => {
                   const v = ins.data[c.name];
+
+                  if (editing && isLocalInsertEditing(ins.rowIndex, c.name)) {
+                    return (
+                      <td key={c.name}>
+                        <input
+                          className="cell-input"
+                          autoFocus
+                          defaultValue={v === undefined || v === null ? '' : String(v)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitLocalInsertEdit(ins.rowIndex, c.name, (e.target as HTMLInputElement).value);
+                            if (e.key === 'Escape') setLocalInsertEdit(null);
+                          }}
+                          onBlur={(e) => commitLocalInsertEdit(ins.rowIndex, c.name, e.target.value)}
+                        />
+                      </td>
+                    );
+                  }
+
                   return (
                     <td
                       key={c.name}
-                      onDoubleClick={() => {
-                        if (!onPendingInsertCell) return;
-                        const next = window.prompt(`新增 ${c.name}`, v === undefined || v === null ? '' : String(v));
-                        if (next === null) return;
-                        onPendingInsertCell(ins.rowIndex, c.name, next === '' ? null : next);
-                      }}
+                      onClick={editing ? () => setLocalInsertEdit({ rowIndex: ins.rowIndex, column: c.name, value: v === undefined || v === null ? '' : String(v) }) : undefined}
+                      style={editing ? { cursor: 'text' } : undefined}
                       className={pkSet.has(c.name) ? 'pk' : ''}
                     >
                       {v === undefined || v === null ? (
@@ -149,18 +189,29 @@ export function ResultTable(props: Props): JSX.Element {
                     const newVal = dirtyCols.has(c.name)
                       ? rowChanges!.find((ch) => ch.column === c.name)!.newValue
                       : row[c.name];
+
+                    if (editing && isLocalEditing(i, c.name)) {
+                      return (
+                        <td key={c.name}>
+                          <input
+                            className="cell-input"
+                            autoFocus
+                            defaultValue={newVal === null ? '' : String(newVal)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') commitLocalEdit(i, c.name, (e.target as HTMLInputElement).value);
+                              if (e.key === 'Escape') setLocalEdit(null);
+                            }}
+                            onBlur={(e) => commitLocalEdit(i, c.name, e.target.value)}
+                          />
+                        </td>
+                      );
+                    }
+
                     return (
                       <td
                         key={c.name}
-                        onDoubleClick={() => {
-                          if (!onCellChange) return;
-                          const next = window.prompt(
-                            `编辑 ${c.name}`,
-                            newVal === null ? 'NULL' : String(newVal),
-                          );
-                          if (next === null) return;
-                          onCellChange(i, c.name, next === 'NULL' ? null : next);
-                        }}
+                        onClick={editing ? () => setLocalEdit({ rowIndex: i, column: c.name, value: newVal === null ? '' : String(newVal) }) : undefined}
+                        style={editing ? { cursor: 'text' } : undefined}
                       >
                         {newVal === null || newVal === undefined ? (
                           <span className="null">NULL</span>

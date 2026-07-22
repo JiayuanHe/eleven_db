@@ -323,6 +323,22 @@ export function registerIpc(): void {
     }
   });
 
+  ipcMain.handle(IPC.table.exportAll, async (_e, args: {
+    id: string;
+    password?: string;
+    database: string;
+    table: string;
+    where?: string;
+  }) => {
+    try {
+      const driver = await connectionManager.open(args.id, args.password);
+      const result = await driver.fetchAll({ database: args.database, table: args.table, where: args.where });
+      return ok(result);
+    } catch (e) {
+      return fail(e);
+    }
+  });
+
   // ---------- Redis ----------
 
   ipcMain.handle(IPC.redis.listDatabases, async (_e, args: { id: string; password?: string }) => {

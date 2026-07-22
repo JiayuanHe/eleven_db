@@ -57,6 +57,8 @@ export function TableBrowser(props: Props): JSX.Element {
   // CRUD 状态
   const [pendingInserts, setPendingInserts] = useState<PendingRow[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [editing, setEditing] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const pks = useMemo(() => schema.filter((c) => c.isPrimary).map((c) => c.name), [schema]);
   const clauses = useMemo(() => rowGroups.flat(), [rowGroups]);
@@ -242,14 +244,37 @@ export function TableBrowser(props: Props): JSX.Element {
     }
   };
 
-  const onExport = async () => {
+  const onExport = async (scope: 'page' | 'all' = 'page') => {
+    if (scope === 'all') {
+      const r = await call<QueryResult>(
+        window.api.table.exportAll({
+          id: props.conn.id,
+          database: props.database,
+          table: props.table,
+          where: composedWhere || undefined,
+        }),
+      );
+      const headers = r.columns.map((c: { name: string }) => c.name);
+      const csv = toCsv(headers, r.rows);
+      const file = await call<string | false>(window.api.exportCsv(`${props.table}_all.csv`, csv));
+      if (file) toast.push(`已导出 ${r.rows.length} 行至 ${file}`, 'success');
+      return;
+    }
     if (!result) return;
     const headers = result.columns.map((c: { name: string }) => c.name);
     const csv = toCsv(headers, result.rows);
-    const file = await call<string | false>(
-      window.api.exportCsv(`${props.table}.csv`, csv),
-    );
-    if (file) toast.push(`已导出 ${file}`, 'success');
+    const file = await call<string | false>(window.api.exportCsv(`${props.table}.csv`, csv));
+    if (file) toast.push(`已导出 ${result.rows.length} 行至 ${file}`, 'success');
+  };
+
+  const onDeleteSelected = () => {
+    if (selected.size === 0) return;
+    if (pks.length === 0) {
+      toast.push('该表无主键，无法安全生成 DELETE', 'error');
+      return;
+    }
+    // 选中行已收集在 selected 中，提交时会变 op:'delete'
+    toast.push(`已标记 ${selected.size} 行待删除，点提交写入数据库`, 'info');
   };
 
   // ---------- 条件区 handler ----------
@@ -289,12 +314,16 @@ export function TableBrowser(props: Props): JSX.Element {
     );
 
   return (
-    <div className="table-browser">
+    <div className="table-browser" onClick={() => setShowExportMenu(false)}>
       <div className="tb-toolbar">
-        <h3>{props.database}.{props.table}</h3>
-
         <button onClick={addInsertRow} title="插入一行新数据">
           + 新增行
+        </button>
+        <button
+          onClick={() => setEditing((e) => !e)}
+          title="开启后可直接点击单元格编辑整张表"
+        >
+          {editing ? '退出编辑' : '编辑'}
         </button>
         <button
           onClick={onCommit}
@@ -306,13 +335,22 @@ export function TableBrowser(props: Props): JSX.Element {
         </button>
         <button onClick={() => reload(composedWhere)}>刷新</button>
         <button
-          onClick={() => selected.forEach(() => setSelected(new Set()))}
+          onClick={onDeleteSelected}
           disabled={selected.size === 0}
-          title="取消所有勾选"
+          className="danger-ghost"
+          title="删除选中的行"
         >
-          清空选择
+          删除 ({selected.size})
         </button>
-        <button onClick={onExport}>导出 CSV</button>
+        <div className="export-wrap" style={{ position: 'relative' }}>
+          <button onClick={(e) => { e.stopPropagation(); setShowExportMenu((v) => !v); }}>导出 ▾</button>
+          {showExportMenu && (
+            <div className="export-dropdown" onClick={(e) => e.stopPropagation()}>
+              <button onClick={() => { setShowExportMenu(false); onExport('page'); }}>导出当前页</button>
+              <button onClick={() => { setShowExportMenu(false); onExport('all'); }}>导出全部数据</button>
+            </div>
+          )}
+        </div>
         <button onClick={() => setShowAdvanced((s) => !s)}>
           {showAdvanced ? '隐藏高级' : '高级'}
         </button>
@@ -501,6 +539,7 @@ export function TableBrowser(props: Props): JSX.Element {
           onSelectAll={onSelectAll}
           pendingInserts={pendingInserts}
           onPendingInsertCell={onPendingInsertCell}
+          editing={editing}
         />
       )}
       <div className="tb-statusbar">
