@@ -22,8 +22,18 @@
     "asarUnpack": [],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
@@ -62,6 +72,7 @@
     "eleven": "bin/eleven-cli.js"
   },
   "dependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.62.2",
     "ioredis": "^5.4.1",
     "mysql2": "^3.11.0"
   },
