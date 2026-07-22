@@ -288,6 +288,23 @@ input::placeholder { color: var(--muted); }
 }
 .worktab:hover { background: var(--bg-2); }
 .worktab.active { background: var(--bg-2); border: 1px solid var(--line); }
+
+.tab-dropdown-wrap {
+  position: relative;
+}
+.tab-dropdown {
+  position: absolute; top: 100%; right: 0; z-index: 30;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  min-width: 160px;
+  padding: 4px 0;
+  box-shadow: var(--shadow);
+}
+.tab-dropdown .ctx-item { display: block; width: 100%; text-align: left; background: transparent; border: 0; border-radius: 0; padding: 6px 12px; color: var(--text); cursor: pointer; font-size: 12px; }
+.tab-dropdown .ctx-item:hover { background: var(--accent-2); color: #fff; }
+.tab-dropdown .ctx-item.danger { color: var(--danger); }
+.tab-dropdown .ctx-item.danger:hover { background: var(--danger); color: #fff; }
 .workbody { min-height: 0; overflow: hidden; }
 
 /* ===== SQL console ===== */

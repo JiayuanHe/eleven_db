@@ -15,7 +15,8 @@ import { toCsv } from '../lib/csv';
 interface Props {
   conn: ConnectionConfig;
   db: number;
-  key: string;
+  /** Redis key 名（不能用 `key`，那是 React 保留 prop） */
+  keyName: string;
 }
 
 type KeyInfo = {
@@ -63,11 +64,11 @@ export function RedisBrowser(props: Props): JSX.Element {
     setErr(null);
     setDirty(false);
     try {
-      const i = await call<KeyInfo>(window.api.redis.describeKey(props.conn.id, props.db, props.key));
+      const i = await call<KeyInfo>(window.api.redis.describeKey(props.conn.id, props.db, props.keyName));
       setInfo(i);
       setTtlInput(i.ttl < 0 ? '' : String(i.ttl));
       const v = await call<ValueData & { key: string; type: string }>(
-        window.api.redis.getValue(props.conn.id, props.db, props.key, i.type),
+        window.api.redis.getValue(props.conn.id, props.db, props.keyName, i.type),
       );
       const { key: _, type: __, ...rest } = v;
       void _; void __;
@@ -82,7 +83,7 @@ export function RedisBrowser(props: Props): JSX.Element {
   useEffect(() => {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.db, props.key, props.conn.id]);
+  }, [props.db, props.keyName, props.conn.id]);
 
   const onCommitValue = async () => {
     if (!info) return;
@@ -90,7 +91,7 @@ export function RedisBrowser(props: Props): JSX.Element {
       await call(window.api.redis.setValue({
         id: props.conn.id,
         database: props.db,
-        key: props.key,
+        key: props.keyName,
         type: info.type,
         data,
       }));
@@ -106,7 +107,7 @@ export function RedisBrowser(props: Props): JSX.Element {
     if (!ttlInput.trim()) {
       // 空 = 永不过期
       try {
-        await call(window.api.redis.persist(props.conn.id, props.db, props.key));
+        await call(window.api.redis.persist(props.conn.id, props.db, props.keyName));
         toast.push('TTL 已清除', 'success');
         reload();
       } catch (e) { toast.push((e as Error).message, 'error'); }
@@ -115,25 +116,25 @@ export function RedisBrowser(props: Props): JSX.Element {
     const n = Number(ttlInput);
     if (!Number.isFinite(n) || n < 0) return toast.push('TTL 必须是 ≥0 的数字', 'error');
     try {
-      await call(window.api.redis.expire(props.conn.id, props.db, props.key, n));
+      await call(window.api.redis.expire(props.conn.id, props.db, props.keyName, n));
       toast.push('TTL 已设置', 'success');
       reload();
     } catch (e) { toast.push((e as Error).message, 'error'); }
   };
 
   const onDelete = async () => {
-    if (!confirm(`删除 key "${props.key}"?`)) return;
+    if (!confirm(`删除 key "${props.keyName}"?`)) return;
     try {
-      await call(window.api.redis.del(props.conn.id, props.db, props.key));
+      await call(window.api.redis.del(props.conn.id, props.db, props.keyName));
       toast.push('已删除', 'success');
     } catch (e) { toast.push((e as Error).message, 'error'); }
   };
 
   const onRename = async () => {
-    const next = window.prompt('新 key 名', props.key);
-    if (!next || next === props.key) return;
+    const next = window.prompt('新 key 名', props.keyName);
+    if (!next || next === props.keyName) return;
     try {
-      await call(window.api.redis.rename(props.conn.id, props.db, props.key, next));
+      await call(window.api.redis.rename(props.conn.id, props.db, props.keyName, next));
       toast.push('已重命名', 'success');
     } catch (e) { toast.push((e as Error).message, 'error'); }
   };
@@ -295,7 +296,7 @@ export function RedisBrowser(props: Props): JSX.Element {
   return (
     <div className="redis-browser">
       <div className="rb-toolbar">
-        <h3>db{props.db} · {props.key}</h3>
+        <h3>db{props.db} · {props.keyName}</h3>
         {info && (
           <>
             <span className={`rb-type type-${info.type}`}>{TYPE_LABEL[info.type] ?? info.type}</span>

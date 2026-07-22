@@ -46,6 +46,7 @@ export function App(): JSX.Element {
   const [theme, toggleTheme] = useTheme();
   const layout = useLayout();
   const [connStatuses, setConnStatuses] = useState<Record<string, ConnectionStatus>>({});
+  const [ctx, setCtx] = useState<{ x: number; y: number; tabId: string } | null>(null);
 
   const setConnStatus = (id: string, s: ConnectionStatus) => {
     setConnStatuses((m) => (m[id] === s ? m : { ...m, [id]: s }));
@@ -78,9 +79,35 @@ export function App(): JSX.Element {
     setTabs((ts) => [...ts, { id, kind: 'sql', title: `查询 ${ts.length}`, initialSql }]);
     setActiveTabId(id);
   };
+  const [dropdownOpen, setDropdownOpen] = useState<'left' | 'right' | 'others' | 'all' | null>(null);
+
   const closeTab = (id: string) => {
     setTabs((ts) => ts.filter((t) => t.id !== id));
     if (activeTabId === id) setActiveTabId(tabs[0]?.id ?? '');
+  };
+  const closeLeftTabs = (id: string) => {
+    const idx = tabs.findIndex((t) => t.id === id);
+    if (idx <= 0) return;
+    setTabs((ts) => ts.slice(idx));
+    setActiveTabId(id);
+    setDropdownOpen(null);
+  };
+  const closeRightTabs = (id: string) => {
+    const idx = tabs.findIndex((t) => t.id === id);
+    if (idx < 0 || idx >= tabs.length - 1) return;
+    setTabs((ts) => ts.slice(0, idx + 1));
+    setDropdownOpen(null);
+  };
+  const closeOtherTabs = (id: string) => {
+    setTabs((ts) => ts.filter((t) => t.id === id));
+    setActiveTabId(id);
+    setDropdownOpen(null);
+  };
+  const closeAllTabs = () => {
+    const newId = String(Date.now());
+    setTabs([{ id: newId, kind: 'sql', title: '查询 1' }]);
+    setActiveTabId(newId);
+    setDropdownOpen(null);
   };
 
   const showSidebar = layout.sizes.sidebar > 0;
@@ -88,6 +115,7 @@ export function App(): JSX.Element {
   return (
     <div
       className="app"
+      onClick={() => { if (dropdownOpen) setDropdownOpen(null); }}
       style={
         {
           '--col-sidebar': `${layout.sizes.sidebar}px`,
@@ -198,6 +226,12 @@ export function App(): JSX.Element {
                 key={t.id}
                 className={`worktab ${t.id === activeTabId ? 'active' : ''}`}
                 onClick={() => setActiveTabId(t.id)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDropdownOpen(null);
+                  setCtx({ x: e.clientX, y: e.clientY, tabId: t.id });
+                }}
               >
                 <span>{t.title}</span>
                 {tabs.length > 1 && (
@@ -213,6 +247,17 @@ export function App(): JSX.Element {
                 )}
               </div>
             ))}
+            <div className="tab-dropdown-wrap" onClick={(e) => e.stopPropagation()}>
+              <button className="ghost xs" onClick={() => setDropdownOpen(dropdownOpen ? null : 'all')}>⋮</button>
+              {dropdownOpen && (
+                <div className="tab-dropdown">
+                  <button className="ctx-item" onClick={() => { closeLeftTabs(activeTabId); }}>关闭左侧所有标签</button>
+                  <button className="ctx-item" onClick={() => { closeRightTabs(activeTabId); }}>关闭右侧所有标签</button>
+                  <button className="ctx-item" onClick={() => { closeOtherTabs(activeTabId); }}>关闭其他标签</button>
+                  <button className="ctx-item danger" onClick={() => { closeAllTabs(); }}>关闭所有标签</button>
+                </div>
+              )}
+            </div>
             <button className="ghost xs" onClick={() => newSqlTab()}>+ 查询</button>
           </div>
 
@@ -224,7 +269,7 @@ export function App(): JSX.Element {
             ) : activeTab.kind === 'table' && activeTab.database && activeTab.table ? (
               <TableBrowser conn={conn} database={activeTab.database} table={activeTab.table} />
             ) : activeTab.kind === 'redis' && activeTab.redisDb !== undefined && activeTab.redisKey !== undefined ? (
-              <RedisBrowser conn={conn} db={activeTab.redisDb} key={activeTab.redisKey} />
+              <RedisBrowser conn={conn} db={activeTab.redisDb} keyName={activeTab.redisKey} />
             ) : null}
           </div>
         </main>
@@ -234,6 +279,35 @@ export function App(): JSX.Element {
         <span>{status}</span>
         <span className="muted">V1 · MySQL + Redis</span>
       </footer>
+
+      {ctx && (
+        <>
+          <div className="ctx-backdrop" onClick={() => setCtx(null)} />
+          <div
+            className="ctx-menu"
+            style={{ left: ctx.x, top: ctx.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {tabs.length > 1 && (
+              <button className="ctx-item" onClick={() => { closeTab(ctx.tabId); setCtx(null); }}>
+                关闭
+              </button>
+            )}
+            <button className="ctx-item" onClick={() => { closeLeftTabs(ctx.tabId); setCtx(null); }}>
+              关闭左侧所有标签
+            </button>
+            <button className="ctx-item" onClick={() => { closeRightTabs(ctx.tabId); setCtx(null); }}>
+              关闭右侧所有标签
+            </button>
+            <button className="ctx-item" onClick={() => { closeOtherTabs(ctx.tabId); setCtx(null); }}>
+              关闭其他标签
+            </button>
+            <button className="ctx-item danger" onClick={() => { closeAllTabs(); setCtx(null); }}>
+              关闭所有标签
+            </button>
+          </div>
+        </>
+      )}
 
       {editing && (
         <ConnectionEditor
