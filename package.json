@@ -1,0 +1,84 @@
+{
+  "name": "eleven-db",
+  "version": "0.1.0",
+  "description": "Lightweight cross-platform database client (V0.1 MVP — MySQL only)",
+  "main": "dist/main/main.js",
+  "author": "",
+  "license": "MIT",
+  "private": true,
+  "build": {
+    "appId": "com.eleven.db",
+    "productName": "Eleven DB",
+    "directories": {
+      "output": "release",
+      "buildResources": "resources"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "asarUnpack": [],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Eleven DB",
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico",
+      "installerHeaderIcon": "resources/icon.ico"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    }
+  },
+  "scripts": {
+    "dev": "concurrently -k -n vite,electron -c blue,magenta \"npm:dev:renderer\" \"npm:dev:main\"",
+    "dev:renderer": "vite",
+    "dev:main": "wait-on tcp:5173 && tsc -p tsconfig.main.json && cross-env NODE_ENV=development electron .",
+    "build:renderer": "vite build",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build": "npm run build:main && npm run build:renderer",
+    "start": "cross-env NODE_ENV=production electron .",
+    "lint": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
+    "cli": "ts-node bin/eleven-cli.ts",
+    "pack": "npm run build && electron-builder --dir",
+    "dist:win": "npm run build && electron-builder --win nsis --x64",
+    "dist:portable": "npm run build && electron-builder --win portable --x64",
+    "dist:all": "npm run build && electron-builder --win nsis portable --x64"
+  },
+  "bin": {
+    "eleven": "bin/eleven-cli.js"
+  },
+  "dependencies": {
+    "ioredis": "^5.4.1",
+    "mysql2": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "concurrently": "^9.0.1",
+    "cross-env": "^7.0.3",
+    "electron": "^32.1.0",
+    "electron-builder": "^25.1.8",
+    "monaco-editor": "^0.52.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8",
+    "wait-on": "^8.0.1"
+  }
+}
