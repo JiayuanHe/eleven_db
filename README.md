@@ -10,7 +10,7 @@ V0.1 MVP：MySQL 连接 + SQL 编辑器 + 表数据浏览与编辑。
 
 | 类型 | 文件 | 说明 |
 |------|------|------|
-| 安装版 | `release/Eleven DB-0.1.0-x64-setup.exe` | NSIS 安装向导，可选安装目录，创建桌面快捷方式 |
+| 安装版 | `release/Eleven DB-0.1.0-x64.exe` | NSIS 安装向导，可选安装目录，创建桌面快捷方式 |
 | 便携版 | `release/Eleven DB-0.1.0-x64-portable.exe` | 绿色版，无需安装，下载后直接运行 |
 
 > **注意**：首次运行会触发 Windows SmartScreen 警告，点击"更多信息→仍要运行"即可。

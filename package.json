@@ -44,10 +44,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Eleven DB",
-      "installerIcon": "resources/icon.ico",
-      "uninstallerIcon": "resources/icon.ico",
-      "installerHeaderIcon": "resources/icon.ico"
+      "shortcutName": "Eleven DB"
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
