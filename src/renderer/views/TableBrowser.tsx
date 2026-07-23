@@ -351,46 +351,48 @@ export function TableBrowser(props: Props): JSX.Element {
             </div>
           )}
         </div>
-        <button onClick={() => setShowAdvanced((s) => !s)}>
-          {showAdvanced ? '隐藏高级' : '高级'}
+        <button
+          className={`toggle-btn ${showAdvanced ? 'active' : ''}`}
+          onClick={() => setShowAdvanced((s) => !s)}
+          title="手写 WHERE 条件"
+        >
+          高级 {showAdvanced ? '▾' : '▸'}
+        </button>
+
+        <button
+          className={`toggle-btn ${showConditions ? 'active' : ''}`}
+          onClick={() => setShowConditions((s) => !s)}
+          title="点击展开筛选条件构建器"
+        >
+          筛选 {showConditions ? '▾' : '▸'}
+          {activeClauseCount > 0 && (
+            <span className="badge">{activeClauseCount}</span>
+          )}
         </button>
 
         {showAdvanced && (
           <div className="filter-advanced">
+            <span className="adv-label">高级 WHERE：</span>
             <input
-              placeholder="高级 WHERE（手写 SQL）"
+              placeholder="例如 status = 'active' AND created_at > '2025-01-01'"
               value={advanced}
               onChange={(e) => setAdvanced(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') reload();
               }}
-              style={{ flex: 1 }}
             />
           </div>
         )}
 
-        <div className="filter-conditions">
-          <div className="cond-toggle">
-            <button
-              className="ghost small"
-              onClick={() => setShowConditions((s) => !s)}
-              title="展开 / 折叠筛选条件"
-            >
-              {showConditions ? '▼ 筛选' : '▶ 筛选'}
+        {showConditions && (
+          <div className="filter-conditions">
+            <div className="cond-toggle">
               {activeClauseCount > 0 && (
-                <span style={{ marginLeft: 4, color: 'var(--accent)' }}>
-                  · {activeClauseCount} 条
+                <span className="summary" title={composedWhere}>
+                  {composedWhere}
                 </span>
               )}
-            </button>
-            {activeClauseCount > 0 && (
-              <span className="summary" title={composedWhere}>
-                {composedWhere}
-              </span>
-            )}
-          </div>
-
-          {showConditions && (
+            </div>
             <div className="cond-body">
               <div className="cond-row cond-header">
                 <span className="cond-label">组合方式</span>
@@ -517,8 +519,8 @@ export function TableBrowser(props: Props): JSX.Element {
                 </div>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {err ? (

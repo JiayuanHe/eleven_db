@@ -13,8 +13,9 @@ async function createMainWindow(): Promise<void> {
     height: 800,
     minWidth: 960,
     minHeight: 600,
-    title: 'Eleven DB',
+    title: '11 — Eleven DB',
     backgroundColor: '#1f2128',
+    icon: path.join(__dirname, '../../resources/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,

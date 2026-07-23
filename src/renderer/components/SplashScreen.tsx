@@ -17,7 +17,7 @@ export function SplashScreen(): JSX.Element | null {
   return (
     <div className="splash">
       <div className="splash-logo">
-        <div className="splash-mark" />
+        <div className="splash-mark">11</div>
         <h1 className="splash-title">Eleven DB</h1>
         <p className="splash-subtitle">Lightweight Database Client</p>
       </div>

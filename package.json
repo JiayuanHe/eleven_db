@@ -20,6 +20,7 @@
     ],
     "asar": true,
     "asarUnpack": [],
+    "icon": "resources/icon.ico",
     "win": {
       "target": [
         {
@@ -35,6 +36,7 @@
           ]
         }
       ],
+      "icon": "resources/icon.ico",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "nsis": {
