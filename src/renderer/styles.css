@@ -927,13 +927,16 @@ input:hover, select:hover { border-color: var(--line-strong); }
 .tb-toolbar .cond-item {
   display: inline-flex; gap: 4px; align-items: center;
   background: var(--bg-1);
-  padding: 3px 4px;
+  padding: 3px 4px 3px 4px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   /* 一行固定 4 个条件 */
   flex: 0 0 calc((100% - 18px) / 4);
   min-width: 0;
   transition: border-color var(--t-fast);
+}
+.tb-toolbar .cond-item .col-del {
+  margin-right: -4px;  /* 抵消右边 padding，让 × 紧贴右边 */
 }
 @media (max-width: 1200px) {
   .tb-toolbar .cond-item {
