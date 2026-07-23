@@ -930,11 +930,20 @@ input:hover, select:hover { border-color: var(--line-strong); }
   padding: 3px 4px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  /* 让多条件自然堆叠成多行（每行一个条件），但仍尽量横向填满 */
-  flex: 1 1 280px;
-  min-width: 240px;
-  max-width: 100%;
+  /* 一行固定 3 个条件 */
+  flex: 0 0 calc((100% - 12px) / 3);
+  min-width: 0;
   transition: border-color var(--t-fast);
+}
+@media (max-width: 900px) {
+  .tb-toolbar .cond-item {
+    flex: 0 0 calc((100% - 6px) / 2);
+  }
+}
+@media (max-width: 600px) {
+  .tb-toolbar .cond-item {
+    flex: 0 0 100%;
+  }
 }
 .tb-toolbar .cond-item:focus-within {
   border-color: var(--accent);
@@ -943,15 +952,15 @@ input:hover, select:hover { border-color: var(--line-strong); }
 .tb-toolbar .cond-row select,
 .tb-toolbar .cond-row input { font-size: 12px; }
 .tb-toolbar .cond-row .col-field {
-  flex: 1 1 120px;
-  min-width: 100px;
-  max-width: 240px;
+  flex: 1 1 60px;
+  min-width: 60px;
+  max-width: 120px;
 }
-.tb-toolbar .cond-row .col-op    { width: 80px;  flex-shrink: 0; flex-grow: 0; }
+.tb-toolbar .cond-row .col-op    { width: 56px;  flex-shrink: 0; flex-grow: 0; }
 .tb-toolbar .cond-row .col-val   {
-  flex: 1 1 140px;
-  min-width: 100px;
-  max-width: 320px;
+  flex: 1 1 60px;
+  min-width: 60px;
+  max-width: 140px;
 }
 /* input+select 统一外观 */
 .tb-toolbar .cond-item input,
