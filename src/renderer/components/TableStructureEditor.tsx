@@ -76,23 +76,21 @@ export function TableStructureEditor(props: Props): JSX.Element {
   );
   const changedRows = useMemo(() => {
     const orig = new Map(props.detail.fields.map((f) => [f.name, f]));
-    return rows
-      .filter((r) => !r.state._isNew && !r.state._deleted)
-      .filter((r) => {
-        const o = orig.get(r.originalName!);
-        if (!o) return false;
-        // 对比每个字段，变了就标脏
-        return (
-          o.rawType !== r.state.rawType ||
-          o.nullable !== r.state.nullable ||
-          o.isPrimary !== r.state.isPrimary ||
-          o.comment !== r.state.comment ||
-          o.defaultIsNull !== r.state.defaultIsNull ||
-          (o.defaultValue ?? null) !== (r.state.defaultValue ?? null) ||
-          // 改名 = change
-          o.name !== r.state.name
-        );
-      });
+    const isDirty = (r: RowDraft): boolean => {
+      if (r.state._isNew || r.state._deleted) return false;
+      const o = orig.get(r.originalName!);
+      if (!o) return false;
+      return (
+        o.rawType !== r.state.rawType ||
+        o.nullable !== r.state.nullable ||
+        o.isPrimary !== r.state.isPrimary ||
+        o.comment !== r.state.comment ||
+        o.defaultIsNull !== r.state.defaultIsNull ||
+        (o.defaultValue ?? null) !== (r.state.defaultValue ?? null) ||
+        o.name !== r.state.name
+      );
+    };
+    return rows.filter((r) => isDirty(r));
   }, [rows, props.detail.fields]);
 
   const valid = useMemo(() => {
@@ -157,6 +155,22 @@ export function TableStructureEditor(props: Props): JSX.Element {
     const edits: FieldEdit[] = [];
     const orig = new Map(props.detail.fields.map((f) => [f.name, f]));
 
+    /** 判断一行是否真正变了 */
+    const isDirty = (r: RowDraft): boolean => {
+      if (r.state._isNew || r.state._deleted) return true;
+      const o = orig.get(r.originalName!);
+      if (!o) return false;
+      return (
+        o.rawType !== r.state.rawType ||
+        o.nullable !== r.state.nullable ||
+        o.isPrimary !== r.state.isPrimary ||
+        o.comment !== r.state.comment ||
+        o.defaultIsNull !== r.state.defaultIsNull ||
+        (o.defaultValue ?? null) !== (r.state.defaultValue ?? null) ||
+        o.name !== r.state.name
+      );
+    };
+
     // 1) 删除
     for (const r of rows) {
       if (r.state._deleted && r.originalName) {
@@ -174,11 +188,12 @@ export function TableStructureEditor(props: Props): JSX.Element {
       }
     }
 
-    // 2) 修改（改名用 change；其他用 modify）
+    // 2) 修改（改名用 change；其他用 modify；仅当字段真正变化时才生成语句）
     for (const r of rows) {
       if (r.state._deleted || r.state._isNew) continue;
       const o = orig.get(r.originalName!);
       if (!o) continue;
+      if (!isDirty(r)) continue; // 没变化，跳过
       const renamed = o.name !== r.state.name;
       edits.push({
         op: renamed ? 'change' : 'modify',
