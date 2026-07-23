@@ -339,6 +339,38 @@ export function registerIpc(): void {
     }
   });
 
+  ipcMain.handle(IPC.table.detail, async (_e, args: {
+    id: string;
+    password?: string;
+    database: string;
+    table: string;
+  }) => {
+    try {
+      const driver = await connectionManager.open(args.id, args.password);
+      const detail = await driver.getTableDetail(args.database, args.table);
+      return ok(detail);
+    } catch (e) {
+      return fail(e);
+    }
+  });
+
+  ipcMain.handle(IPC.table.alter, async (_e, args: {
+    id: string;
+    password?: string;
+    database: string;
+    table: string;
+    edits: import('../shared/types').FieldEdit[];
+    extras?: import('../shared/types').AlterExtras;
+  }) => {
+    try {
+      const driver = await connectionManager.open(args.id, args.password);
+      const result = await driver.applyAlter(args.database, args.table, args.edits, args.extras);
+      return ok(result);
+    } catch (e) {
+      return fail(e);
+    }
+  });
+
   // ---------- Redis ----------
 
   ipcMain.handle(IPC.redis.listDatabases, async (_e, args: { id: string; password?: string }) => {

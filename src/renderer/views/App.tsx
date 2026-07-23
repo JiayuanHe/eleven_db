@@ -7,6 +7,7 @@ import { ResizeHandle } from '../components/ResizeHandle';
 import { SqlConsole } from './SqlConsole';
 import { TableBrowser } from './TableBrowser';
 import { RedisBrowser } from './RedisBrowser';
+import { TableDetailModal } from '../components/TableDetailModal';
 import { toast, call } from '../lib/api';
 import { useTheme } from '../lib/theme';
 import { useLayout } from '../lib/layout';
@@ -42,6 +43,10 @@ export function App(): JSX.Element {
     { id: 'welcome', kind: 'sql', title: '欢迎' },
   ]);
   const [activeTabId, setActiveTabId] = useState('welcome');
+  /** 表详情弹窗（查看/编辑结构） */
+  const [detailTarget, setDetailTarget] = useState<
+    { db: string; table: string; mode: 'view' | 'edit' } | null
+  >(null);
   const [status, setStatus] = useState<string>('就绪');
   const [theme, toggleTheme] = useTheme();
   const layout = useLayout();
@@ -78,6 +83,10 @@ export function App(): JSX.Element {
     const id = String(Date.now());
     setTabs((ts) => [...ts, { id, kind: 'sql', title: `查询 ${ts.length}`, initialSql }]);
     setActiveTabId(id);
+  };
+  /** 打开表详情/编辑弹窗 */
+  const openTableDetail = (db: string, table: string, mode: 'view' | 'edit' = 'view') => {
+    setDetailTarget({ db, table, mode });
   };
   const [dropdownOpen, setDropdownOpen] = useState<'left' | 'right' | 'others' | 'all' | null>(null);
 
@@ -194,6 +203,7 @@ export function App(): JSX.Element {
                 kind="mysql"
                 onSelectTable={openTableTab}
                 onInsertSqlTemplate={(sql) => newSqlTab(sql)}
+                onShowTableDetail={(db, table, mode) => openTableDetail(db, table, mode)}
               />
             ) : conn.kind === 'redis' ? (
               <SchemaTree
@@ -323,6 +333,21 @@ export function App(): JSX.Element {
           }}
           onTested={(ok) => {
             if (editing) setConnStatus(editing.id, ok ? 'ok' : 'error');
+          }}
+        />
+      )}
+
+      {detailTarget && conn && (
+        <TableDetailModal
+          key={`${detailTarget.db}.${detailTarget.table}.${detailTarget.mode}`}
+          conn={conn}
+          database={detailTarget.db}
+          table={detailTarget.table}
+          startInEditMode={detailTarget.mode === 'edit'}
+          onClose={() => {
+            setDetailTarget(null);
+            // 表结构可能变，刷新一下 schema 树
+            setRefreshKey((k) => k + 1);
           }}
         />
       )}

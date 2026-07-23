@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { SchemaObject, ConnectionConfig } from '../../shared/types';
-import { call } from '../lib/api';
+import { call, toast } from '../lib/api';
 import { SchemaIcon } from './SchemaIcon';
 import { groupRedisKeys, makeBreadcrumb, RedisKeyNode } from '../lib/redis-tree';
+import { TableDetailModal } from './TableDetailModal';
 
 /**
  * 中间一列：
@@ -25,6 +26,8 @@ type Props =
       kind: 'mysql';
       onSelectTable: (db: string, table: string) => void;
       onInsertSqlTemplate?: (sql: string) => void;
+      /** 打开表详情/编辑弹窗；mode='view' | 'edit' */
+      onShowTableDetail?: (db: string, table: string, mode?: 'view' | 'edit') => void;
     }
   | {
       connection: ConnectionConfig;
@@ -366,8 +369,23 @@ export function SchemaTree(props: Props): JSX.Element {
             <button className="ctx-item" onClick={() => { props.onInsertSqlTemplate?.(buildSqlTemplate(ctx.db, ctx.obj, 'count')); setCtx(null); }}>
               生成 COUNT(*) 模板
             </button>
-            <button className="ctx-item" onClick={() => { props.onInsertSqlTemplate?.(buildSqlTemplate(ctx.db, ctx.obj, 'show-create')); setCtx(null); }}>
-              生成 SHOW CREATE TABLE
+            <button
+              className="ctx-item"
+              onClick={() => {
+                props.onShowTableDetail?.(ctx.db, ctx.obj.name, 'view');
+                setCtx(null);
+              }}
+            >
+              查看表详情
+            </button>
+            <button
+              className="ctx-item"
+              onClick={() => {
+                props.onShowTableDetail?.(ctx.db, ctx.obj.name, 'edit');
+                setCtx(null);
+              }}
+            >
+              编辑表结构
             </button>
             <button className="ctx-item" onClick={() => { props.onInsertSqlTemplate?.(buildSqlTemplate(ctx.db, ctx.obj, 'truncate')); setCtx(null); }}>
               清空表 (TRUNCATE 模板)

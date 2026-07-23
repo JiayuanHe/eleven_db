@@ -1,9 +1,13 @@
 import mysql, { Pool, PoolOptions, RowDataPacket } from 'mysql2/promise';
 import type {
+  AlterExtras,
   ConnectionConfig,
+  FieldEdit,
   QueryResult,
   SchemaObject,
   TableColumn,
+  TableDetail,
+  TableFieldDetail,
 } from '../../shared/types';
 import type {
   CommitOptions,
@@ -119,6 +123,183 @@ export class MysqlDriver implements ConnectionDriver {
       defaultValue: r.defaultValue ?? null,
       comment: r.comment ?? '',
     }));
+  }
+
+  async getTableDetail(database: string, table: string): Promise<TableDetail> {
+    // 1) SHOW CREATE TABLE 拿原始 DDL
+    const [ddlRows] = await this.getPool().query<RowDataPacket[]>(
+      `SHOW CREATE TABLE \`${database}\`.\`${table}\``,
+    );
+    if (!ddlRows.length) throw new Error(`表 ${database}.${table} 不存在`);
+    const ddlRow = ddlRows[0] as unknown as Record<string, unknown>;
+    // MySQL 返回字段名是 'Create Table'；根据驱动可能为 'Create View'
+    const ddl = String(ddlRow['Create Table'] ?? Object.values(ddlRow)[1] ?? '');
+
+    // 2) information_schema 拿完整字段信息
+    const [colRows] = await this.getPool().query<RowDataPacket[]>(
+      `SELECT
+         COLUMN_NAME    AS name,
+         COLUMN_TYPE    AS rawType,
+         IS_NULLABLE    AS nullableStr,
+         COLUMN_DEFAULT AS defaultRaw,
+         EXTRA          AS extra,
+         COLUMN_COMMENT AS comment,
+         COLUMN_KEY     AS colKey
+       FROM information_schema.columns
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+       ORDER BY ORDINAL_POSITION`,
+      [database, table],
+    );
+
+    const fields: TableFieldDetail[] = colRows.map((r) => {
+      const nullableStr = String(r.nullableStr ?? 'NO');
+      const extra = String(r.extra ?? '');
+      const isAutoInc = /auto_increment/i.test(extra);
+      let defaultValue: string | null = null;
+      let defaultIsNull = false;
+      if (r.defaultRaw === null) {
+        // 没有默认值时，DEFAULT NULL 会被报为 NULL；NULLABLE=NO 时会报 NULL 也是合理
+        // 区分两个语义：“不设默认值”（null） vs “默认值是 NULL”（defaultIsNull=true）
+        if (nullableStr === 'YES') {
+          defaultIsNull = true;
+          defaultValue = 'NULL';
+        } else {
+          defaultValue = null;
+          defaultIsNull = false;
+        }
+      } else {
+        defaultValue = String(r.defaultRaw);
+        defaultIsNull = false;
+      }
+      return {
+        name: String(r.name),
+        rawType: String(r.rawType),
+        nullable: nullableStr === 'YES',
+        defaultValue,
+        defaultIsNull,
+        comment: String(r.comment ?? ''),
+        isPrimary: String(r.colKey ?? '') === 'PRI',
+        // 在类型字符串里拼接 auto_increment 让编辑页读得出来
+        // 但默认不在 rawType 里拼，保持原样；UI 在提示中说明
+      } as TableFieldDetail & { _autoInc?: boolean };
+    });
+
+    // 3) 表注释 / 引擎 / 字符集
+    const [tblRows] = await this.getPool().query<RowDataPacket[]>(
+      `SELECT
+         TABLE_COMMENT  AS tableComment,
+         ENGINE         AS engine,
+         TABLE_COLLATION AS collation
+       FROM information_schema.tables
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?`,
+      [database, table],
+    );
+    const tbl = tblRows[0];
+    const tableComment = tbl ? String(tbl.tableComment ?? '') : '';
+    const engine = tbl?.engine ? String(tbl.engine) : undefined;
+    const collation = tbl?.collation ? String(tbl.collation) : undefined;
+    const charset = collation ? collation.split('_')[0] : undefined;
+
+    // 4) 表自增起始值
+    let autoIncrement: number | undefined;
+    try {
+      const [aiRows] = await this.getPool().query<RowDataPacket[]>(
+        `SELECT AUTO_INCREMENT AS ai FROM information_schema.tables WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?`,
+        [database, table],
+      );
+      if (aiRows[0]?.ai != null) autoIncrement = Number(aiRows[0].ai);
+    } catch {
+      /* ignore */
+    }
+
+    return {
+      database,
+      table,
+      ddl,
+      fields,
+      tableComment,
+      engine,
+      charset,
+      autoIncrement,
+    };
+  }
+
+  async applyAlter(
+    database: string,
+    table: string,
+    edits: FieldEdit[],
+    extras?: AlterExtras,
+  ): Promise<QueryResult> {
+    const start = Date.now();
+    if (!edits.length && !extras?.dropPrimary?.length) {
+      return { columns: [], rows: [], elapsedMs: 0, affectedRows: 0 };
+    }
+
+    // 拆成 3 类有序操作：
+    //   - drop   优先（避免字段重名冲突）
+    //   - rename/change  次之
+    //   - add    最后
+    //   - modify 最后（要改字段名的会冲突，UI 会用 change 表达）
+    const drops = edits.filter((e) => e.op === 'drop');
+    const changes = edits.filter((e) => e.op === 'change');
+    const modifies = edits.filter((e) => e.op === 'modify');
+    const adds = edits.filter((e) => e.op === 'add');
+
+    const fullName = `\`${database}\`.\`${table}\``;
+    const stmts: string[] = [];
+
+    // ---- DROP COLUMN ----
+    for (const e of drops) {
+      if (!e.originalName) throw new Error('DROP 操作必须提供原字段名');
+      stmts.push(`ALTER TABLE ${fullName} DROP COLUMN \`${e.originalName}\``);
+    }
+
+    // ---- DROP PRIMARY KEY（如果原始主键被取消勾选）----
+    if (extras?.dropPrimary?.length) {
+      stmts.push(`ALTER TABLE ${fullName} DROP PRIMARY KEY`);
+    }
+
+    // ---- CHANGE（可能改名）----
+    for (const e of changes) {
+      if (!e.originalName || !e.newName) throw new Error('CHANGE 操作必须提供原字段名和新字段名');
+      const def = fieldDefinitionClause(e);
+      stmts.push(`ALTER TABLE ${fullName} CHANGE COLUMN \`${e.originalName}\` \`${e.newName}\` ${def}`);
+    }
+
+    // ---- MODIFY（不改名）----
+    for (const e of modifies) {
+      if (!e.originalName) throw new Error('MODIFY 操作必须提供字段名');
+      const def = fieldDefinitionClause(e);
+      stmts.push(`ALTER TABLE ${fullName} MODIFY COLUMN \`${e.originalName}\` ${def}`);
+    }
+
+    // ---- ADD ----
+    for (const e of adds) {
+      if (!e.newName) throw new Error('ADD 操作必须提供新字段名');
+      const def = fieldDefinitionClause(e);
+      const tail = e.isPrimary ? ` PRIMARY KEY` : '';
+      stmts.push(`ALTER TABLE ${fullName} ADD COLUMN \`${e.newName}\` ${def}${tail}`);
+    }
+
+    const conn = await this.getPool().getConnection();
+    try {
+      await conn.beginTransaction();
+      for (const sql of stmts) {
+        await conn.query(sql);
+      }
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+    return {
+      columns: [],
+      rows: [],
+      elapsedMs: Date.now() - start,
+      affectedRows: stmts.length,
+    };
   }
 
   async fetchData(options: FetchDataOptions): Promise<QueryResult> {
@@ -268,6 +449,30 @@ function normalizeValue(v: unknown): unknown {
   // NULL 显式支持：渲染层把 null 当 SQL NULL
   if (v === null || v === undefined) return null;
   return v;
+}
+
+/**
+ * 拼接字段定义子句（不含字段名）。
+ * 例如:  VARCHAR(64) NOT NULL DEFAULT 'foo' COMMENT '名称'
+ */
+function fieldDefinitionClause(e: FieldEdit): string {
+  const t = e.type.trim();
+  if (!t) throw new Error('字段类型不能为空');
+  const nullClause = e.nullable ? 'NULL' : 'NOT NULL';
+  let defClause = '';
+  if (e.defaultIsNull) {
+    defClause = ' DEFAULT NULL';
+  } else if (e.defaultValue !== null && e.defaultValue !== undefined && e.defaultValue !== '') {
+    // 如果看起来是函数或数字，不加引号；其他一律加引号
+    const v = e.defaultValue.trim();
+    const isNumeric = /^-?\d+(\.\d+)?$/.test(v);
+    const isKeyword = /^(CURRENT_TIMESTAMP|NOW\(\)|UUID\(\)|CURRENT_DATE|TRUE|FALSE)$/i.test(v);
+    defClause = isNumeric || isKeyword
+      ? ` DEFAULT ${v}`
+      : ` DEFAULT '${v.replace(/'/g, "''")}'`;
+  }
+  const commentClause = e.comment ? ` COMMENT '${e.comment.replace(/'/g, "''")}'` : '';
+  return `${t} ${nullClause}${defClause}${commentClause}`.trim();
 }
 
 /** 简易 SQL 语句切分。V0.5 可换更稳健的实现。 */

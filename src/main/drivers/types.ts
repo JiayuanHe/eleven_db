@@ -8,9 +8,12 @@
 
 import type {
   ConnectionConfig,
+  AlterExtras,
+  FieldEdit,
   QueryResult,
   SchemaObject,
   TableColumn,
+  TableDetail,
 } from '../../shared/types';
 
 export interface ListObjectsOptions {
@@ -59,6 +62,23 @@ export interface ConnectionDriver {
   listObjects(options?: ListObjectsOptions): Promise<SchemaObject[]>;
 
   getTableSchema(database: string, table: string): Promise<TableColumn[]>;
+
+  /**
+   * 获取表详情：SHOW CREATE TABLE 原文 + 完整字段信息。
+   * V0.1 仅 MySQL 实现。
+   */
+  getTableDetail(database: string, table: string): Promise<TableDetail>;
+
+  /**
+   * 根据 FieldEdit[] 生成并执行 ALTER TABLE 语句。
+   * V0.1 仅 MySQL 实现；按顺序依次执行，最后一起 commit。
+   */
+  applyAlter(
+    database: string,
+    table: string,
+    edits: FieldEdit[],
+    extras?: AlterExtras,
+  ): Promise<QueryResult>;
 
   fetchData(options: FetchDataOptions): Promise<QueryResult>;
 

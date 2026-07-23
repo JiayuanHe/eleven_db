@@ -83,6 +83,63 @@ export interface TableColumn {
   comment?: string;
 }
 
+/** 编辑表结构时使用：包含字段的"原始信息"（完整类型/默认值表达式等） */
+export interface TableFieldDetail {
+  name: string;
+  /** 形如 varchar(255)、int、decimal(10,2)、text 等 */
+  rawType: string;
+  /** 是否允许 NULL */
+  nullable: boolean;
+  /** 默认值表达式（已剥掉引号）；例如 0 / CURRENT_TIMESTAMP / NULL */
+  defaultValue: string | null;
+  /** 是否为 NULL */
+  defaultIsNull: boolean;
+  /** 字段注释 */
+  comment: string;
+  /** 是否为主键一部分 */
+  isPrimary: boolean;
+}
+
+/** 表的完整元信息：用于详情/编辑 */
+export interface TableDetail {
+  database: string;
+  table: string;
+  /** SHOW CREATE TABLE 原文 */
+  ddl: string;
+  fields: TableFieldDetail[];
+  /** 表注释 */
+  tableComment: string;
+  /** 表引擎（MySQL）；其他数据库可能为空 */
+  engine?: string;
+  /** 表字符集 */
+  charset?: string;
+  /** 自增起始值 */
+  autoIncrement?: number;
+}
+
+/** 表结构编辑：单个字段的编辑项 */
+export interface FieldEdit {
+  /** 原始字段名（新增/删除为空） */
+  originalName: string;
+  /** 操作类型 */
+  op: 'add' | 'drop' | 'modify' | 'change';
+  /** 新字段名（change/rename 时必填） */
+  newName: string;
+  /** 完整类型字符串，例如 VARCHAR(255)、INT、DECIMAL(10,2) */
+  type: string;
+  nullable: boolean;
+  defaultValue: string | null;
+  defaultIsNull: boolean;
+  comment: string;
+  isPrimary: boolean;
+}
+
+/** 表结构编辑：附加操作 */
+export interface AlterExtras {
+  /** 需要移除的主键字段（原始字段名列表）；空表示保留主键 */
+  dropPrimary: string[];
+}
+
 export interface QueryResult {
   /** 列定义 */
   columns: { name: string; type: string }[];

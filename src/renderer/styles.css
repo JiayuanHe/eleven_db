@@ -850,3 +850,220 @@ input::placeholder { color: var(--muted); }
   overflow: auto;
   white-space: pre;
 }
+
+/* ===== Modal ===== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  padding: 0;
+  max-width: 95vw;
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-wide {
+  width: 800px;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+}
+.modal-title {
+  flex: 1;
+  font-size: 13px;
+}
+.modal-body {
+  padding: 14px;
+  overflow: auto;
+  flex: 1;
+}
+.modal-footer {
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--bg-2);
+  font-size: 11px;
+}
+.tab-bar.sub-tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  padding: 0 14px;
+  background: var(--bg-2);
+}
+.tab-bar.sub-tab-bar .tab {
+  padding: 8px 14px;
+  font-size: 12px;
+  border-bottom: 2px solid transparent;
+}
+.tab-bar.sub-tab-bar .tab.active {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
+.ddl-block {
+  margin: 0;
+  padding: 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  font-size: 12px;
+  white-space: pre;
+  overflow: auto;
+}
+table.detail-fields {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+table.detail-fields th,
+table.detail-fields td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+table.detail-fields th {
+  color: var(--muted);
+  font-weight: 500;
+  background: var(--bg-2);
+}
+table.detail-fields code {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  background: var(--bg-2);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* ===== TableStructureEditor ===== */
+.tse-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 10px 14px 0;
+}
+.tse-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.tse-toolbar .spacer {
+  flex: 1;
+}
+.tse-warn {
+  margin: 8px 0;
+  padding: 6px 10px;
+  background: rgba(220, 80, 80, 0.12);
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  color: var(--danger);
+  font-size: 12px;
+}
+.tse-preview {
+  margin: 8px 0;
+  padding: 8px 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  font-size: 11px;
+  white-space: pre;
+  max-height: 160px;
+  overflow: auto;
+}
+.tse-grid-wrap {
+  flex: 1;
+  overflow: auto;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+table.tse-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+table.tse-grid thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-2);
+  text-align: left;
+  padding: 6px 8px;
+  font-weight: 500;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+table.tse-grid tbody td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+table.tse-grid input[type='text'],
+table.tse-grid input:not([type]) {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 3px 5px;
+  font-size: 12px;
+  color: var(--text);
+}
+table.tse-grid input[type='text']:focus,
+table.tse-grid input:not([type]):focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-2);
+}
+table.tse-grid tr.tse-row-dirty td {
+  background: rgba(255, 200, 60, 0.08);
+}
+table.tse-grid tr.tse-row-new td {
+  background: rgba(80, 200, 120, 0.07);
+}
+table.tse-grid tr.tse-row-deleted td {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+.tse-default {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+}
+.tse-default label {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+.muted { color: var(--muted); }
+.muted.small { font-size: 11px; }
+.danger-ghost {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+.danger-ghost:hover {
+  background: var(--danger);
+  color: #fff;
+}
+.danger-ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.spacer { flex: 1; }

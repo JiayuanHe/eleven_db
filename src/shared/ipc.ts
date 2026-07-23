@@ -37,6 +37,10 @@ export const IPC = {
     commit: 'table.commit',
     /** 导出全部数据（不带分页） */
     exportAll: 'table.exportAll',
+    /** 获取表详情（DDL + 字段详情 + 表注释） */
+    detail: 'table.detail',
+    /** 应用 ALTER TABLE（由 FieldEdit[] 生成 SQL） */
+    alter: 'table.alter',
   },
   redis: {
     /** 列 logical db（schema 树第一层） */

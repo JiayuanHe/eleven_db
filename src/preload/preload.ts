@@ -1,12 +1,15 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from '../shared/ipc';
 import type {
+  AlterExtras,
   ConnectionConfig,
+  FieldEdit,
   IpcResult,
   QueryHistoryItem,
   QueryResult,
   SchemaObject,
   TableColumn,
+  TableDetail,
 } from '../shared/types';
 
 /**
@@ -76,6 +79,16 @@ const api = {
       where?: string;
       password?: string;
     }) => invoke<QueryResult>(IPC.table.exportAll, args),
+    detail: (id: string, database: string, table: string, password?: string) =>
+      invoke<TableDetail>(IPC.table.detail, { id, password, database, table }),
+    alter: (args: {
+      id: string;
+      database: string;
+      table: string;
+      edits: FieldEdit[];
+      extras?: AlterExtras;
+      password?: string;
+    }) => invoke<QueryResult>(IPC.table.alter, args),
   },
   redis: {
     listDatabases: (id: string, password?: string) =>
