@@ -8,7 +8,6 @@ import {
   OPERATORS,
   Op,
   WhereClause,
-  defaultSuggestions,
   combine,
   withAdvanced,
 } from '../lib/where-builder';
@@ -290,15 +289,6 @@ export function TableBrowser(props: Props): JSX.Element {
   };
 
   // ---------- 条件区 handler ----------
-  const parseSuggestion = (s: string): WhereClause | null => {
-    const m = s.match(/^([`\w]+)\s+(IS NULL|IS NOT NULL|LIKE|NOT LIKE|=|<>|>=|<=|>|<|IN|BETWEEN)\s*(.*)$/);
-    if (!m) return null;
-    return {
-      column: m[1].replace(/`/g, ''),
-      op: m[2] as Op,
-      value: m[3] ?? '',
-    };
-  };
   const addRow = () => setRowGroups((rs) => [...rs, [{ column: '', op: '=', value: '' }]]);
   const removeRow = (rowIdx: number) =>
     setRowGroups((rs) => {
@@ -490,23 +480,6 @@ export function TableBrowser(props: Props): JSX.Element {
                         }}
                         disabled={!cl.column || cl.op === 'IS NULL' || cl.op === 'IS NOT NULL'}
                       />
-                      {searchSuggestionFor(schema, cl) && (
-                        <select
-                          className="col-sug"
-                          onChange={(e) => {
-                            if (!e.target.value) return;
-                            const parsed = parseSuggestion(e.target.value);
-                            if (parsed) updateItem(rowIdx, itemIdx, parsed);
-                          }}
-                          value=""
-                          title="推荐条件"
-                        >
-                          <option value="">推荐</option>
-                          {defaultSuggestions(searchSuggestionFor(schema, cl)!).map((s) => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                        </select>
-                      )}
                       <button
                         className="ghost small col-del"
                         title="删除该条件"
@@ -648,11 +621,4 @@ export function TableBrowser(props: Props): JSX.Element {
       </div>
     </div>
   );
-}
-
-function searchSuggestionFor(
-  schema: TableColumn[],
-  cl: WhereClause,
-): TableColumn | null {
-  return schema.find((c) => c.name === cl.column) ?? null;
 }
