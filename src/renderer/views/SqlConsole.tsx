@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ConnectionConfig, QueryResult, SchemaObject } from '../../shared/types';
 import { call, toast } from '../lib/api';
 import { SqlEditor } from '../components/SqlEditor';
@@ -7,26 +7,16 @@ import { toCsv } from '../lib/csv';
 import { formatSql } from '../lib/sqlFormat';
 
 /**
- * SQL 编辑器视图：
- * - 多 Tab 暂存，每个 Tab 独立保存状态
+ * 单个 SQL 编辑器视图（无内嵌 tab）：
+ * - 由外层 App 的 WorkTab 控制"多个查询 tab"
+ * - 本组件只负责：编辑 + 数据库选择 + 执行 + 展示结果 + 导出/格式化
  * - Ctrl/Cmd + Enter 执行
  * - 数据库选择 + 表/列补全
- * - 结果展示 ResultTable
  */
-
-interface Tab {
-  id: string;
-  title: string;
-  sql: string;
-  result: QueryResult | null;
-  loading: boolean;
-  error: string | null;
-  elapsedMs: number;
-}
 
 interface Props {
   conn: ConnectionConfig;
-  /** 首个 Tab 的预填 SQL（从右键菜单 "生成 SELECT 模板" 等传入） */
+  /** 预填 SQL（从右键菜单 "生成 SELECT 模板" 等传入；只在首次挂载时使用） */
   initialSql?: string;
 }
 
@@ -36,28 +26,30 @@ interface TableCompletion {
 }
 
 export function SqlConsole(props: Props): JSX.Element {
-  const [tabs, setTabs] = useState<Tab[]>(() => {
-    const init = props.initialSql ?? '';
-    return [{ id: '1', title: '查询 1', sql: init, result: null, loading: false, error: null, elapsedMs: 0 }];
-  });
-  const [activeId, setActiveId] = useState('1');
+  // SQL 编辑器内容（受控）
+  const [sql, setSql] = useState<string>(() => props.initialSql ?? '');
+  const [result, setResult] = useState<QueryResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
 
+  // 数据库选择 + 补全
   const [schemas, setSchemas] = useState<string[]>([]);
   const [selectedDb, setSelectedDb] = useState<string>('');
   const [completions, setCompletions] = useState<{ tables: TableCompletion[] }>({ tables: [] });
 
-  const active = tabs.find((t) => t.id === activeId)!;
-
-  // 加载数据库列表（listObjects 不带 database 参数走 SHOW DATABASES）
+  // 加载数据库列表
   useEffect(() => {
     setSchemas([]);
     setSelectedDb('');
     setCompletions({ tables: [] });
-    call<SchemaObject[]>(window.api.conn.listObjects(props.conn.id, undefined)).then((dbs) => {
-      const names = dbs.map((d) => d.name);
-      setSchemas(names);
-      if (names.length > 0) setSelectedDb(names[0]);
-    }).catch(() => {});
+    call<SchemaObject[]>(window.api.conn.listObjects(props.conn.id, undefined))
+      .then((dbs) => {
+        const names = dbs.map((d) => d.name);
+        setSchemas(names);
+        if (names.length > 0) setSelectedDb(names[0]);
+      })
+      .catch(() => {});
   }, [props.conn.id]);
 
   // 加载选中数据库的表补全
@@ -69,94 +61,46 @@ export function SqlConsole(props: Props): JSX.Element {
         tables.map((t) =>
           call<any[]>(window.api.table.schema(props.conn.id, selectedDb, t.name))
             .then((cols) => ({ name: t.name, columns: cols.map((c: any) => c.name) }))
-            .catch(() => ({ name: t.name, columns: [] as string[] }))
-        )
+            .catch(() => ({ name: t.name, columns: [] as string[] })),
+        ),
       ).then((result) => setCompletions({ tables: result }));
     }).catch(() => {});
   }, [props.conn.id, selectedDb]);
 
-  const setTabState = (id: string, patch: Partial<Tab>) => {
-    setTabs((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-  };
-
-  const newTab = () => {
-    const id = String(Date.now());
-    setTabs((ts) => [
-      ...ts,
-      { id, title: `查询 ${ts.length + 1}`, sql: '', result: null, loading: false, error: null, elapsedMs: 0 },
-    ]);
-    setActiveId(id);
-  };
-
-  const closeTab = (id: string) => {
-    setTabs((ts) => ts.filter((t) => t.id !== id));
-    if (activeId === id) setActiveId(tabs[0]?.id ?? '');
-  };
-
-  const run = async (id: string, sql: string) => {
+  const run = async () => {
     if (!sql.trim()) return;
-    setTabState(id, { loading: true, error: null });
+    setLoading(true);
+    setError(null);
     try {
-      const actualSql = selectedDb && selectedDb !== props.conn.database
-        ? `USE \`${selectedDb}\`;\n${sql.trim()}`
-        : sql.trim();
+      const actualSql =
+        selectedDb && selectedDb !== props.conn.database
+          ? `USE \`${selectedDb}\`;\n${sql.trim()}`
+          : sql.trim();
       const r = await call<QueryResult>(window.api.sql.execute(props.conn.id, actualSql));
-      setTabState(id, { result: r, loading: false, elapsedMs: r.elapsedMs });
+      setResult(r);
+      setElapsedMs(r.elapsedMs);
     } catch (e) {
-      setTabState(id, { error: (e as Error).message, loading: false });
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const exportCsv = async (t: Tab) => {
-    if (!t.result) return;
-    const headers = t.result.columns.map((c: { name: string }) => c.name);
-    const csv = toCsv(headers, t.result.rows);
-    const file = await call<string | false>(window.api.exportCsv(`${t.title}.csv`, csv));
+  const exportCsv = async () => {
+    if (!result) return;
+    const headers = result.columns.map((c: { name: string }) => c.name);
+    const csv = toCsv(headers, result.rows);
+    const file = await call<string | false>(window.api.exportCsv(`查询结果.csv`, csv));
     if (file) toast.push(`已导出 ${file}`, 'success');
   };
 
-  // 切换连接时清空（避免展示错连结果）。
-  // 注意：首次 mount 时不能清空，否则会覆盖 useState 里的 initialSql
-  // （右键菜单"生成 SELECT 模板"创建的新 tab 依赖 initialSql）。
-  const prevConnIdRef = useRef<string>(props.conn.id);
-  useEffect(() => {
-    if (prevConnIdRef.current !== props.conn.id) {
-      prevConnIdRef.current = props.conn.id;
-      setTabs([{ id: '1', title: '查询 1', sql: '', result: null, loading: false, error: null, elapsedMs: 0 }]);
-      setActiveId('1');
-    }
-  }, [props.conn.id]);
-
   return (
     <div className="sql-console">
-      <div className="tab-bar">
-        {tabs.map((t) => (
-          <div
-            key={t.id}
-            className={`tab ${t.id === activeId ? 'active' : ''}`}
-            onClick={() => setActiveId(t.id)}
-          >
-            <span>{t.title}</span>
-            {tabs.length > 1 && (
-              <button
-                className="ghost xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeTab(t.id);
-                }}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
-        <button className="ghost xs" onClick={newTab} title="新建查询 tab">+ 新建</button>
-      </div>
       <div className="editor-area">
         <SqlEditor
-          value={active.sql}
-          onChange={(v) => setTabState(activeId, { sql: v })}
-          onRun={() => run(activeId, active.sql)}
+          value={sql}
+          onChange={setSql}
+          onRun={run}
           completions={completions}
         />
       </div>
@@ -166,7 +110,6 @@ export function SqlConsole(props: Props): JSX.Element {
           <select
             value={selectedDb}
             onChange={(e) => setSelectedDb(e.target.value)}
-            style={{ fontSize: 11, padding: '1px 4px' }}
           >
             {schemas.map((db) => (
               <option key={db} value={db}>{db}</option>
@@ -174,33 +117,23 @@ export function SqlConsole(props: Props): JSX.Element {
           </select>
           <button
             className="primary"
-            onClick={() => run(activeId, active.sql)}
-            disabled={active.loading || !active.sql.trim()}
+            onClick={run}
+            disabled={loading || !sql.trim()}
           >
-            执行 (Ctrl/Cmd+Enter)
+            {loading ? '执行中…' : '执行 (Ctrl/Cmd+Enter)'}
           </button>
-          {active.result && (
-            <span>
-              {active.result.rows.length} 行 / {active.elapsedMs} ms
+          {result && (
+            <span className="muted small">
+              {result.rows.length.toLocaleString()} 行 · {elapsedMs} ms
             </span>
           )}
-          <button onClick={() => active && exportCsv(active)}>导出 CSV</button>
-          <button
-            onClick={() => {
-              const formatted = formatSql(active.sql);
-              setTabState(activeId, { sql: formatted });
-            }}
-          >
-            格式化
-          </button>
+          <button onClick={exportCsv} disabled={!result}>导出 CSV</button>
+          <button onClick={() => setSql(formatSql(sql))}>格式化</button>
         </div>
-        {active.error ? (
-          <pre className="error">{active.error}</pre>
-        ) : active.result ? (
-          <ResultTable
-            columns={active.result.columns as any}
-            rows={active.result.rows}
-          />
+        {error ? (
+          <pre className="error">{error}</pre>
+        ) : result ? (
+          <ResultTable columns={result.columns as any} rows={result.rows} />
         ) : (
           <div className="empty">输入 SQL 并执行</div>
         )}

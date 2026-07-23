@@ -595,7 +595,7 @@ input:hover, select:hover { border-color: var(--line-strong); }
 
 /* ===== SQL console ===== */
 .sql-console {
-  display: grid; grid-template-rows: 36px 240px 1fr; height: 100%;
+  display: grid; grid-template-rows: 240px 1fr; height: 100%;
 }
 .sql-console .tab-bar {
   display: flex; align-items: end; gap: 2px;
