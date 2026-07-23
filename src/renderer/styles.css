@@ -894,6 +894,33 @@ input:hover, select:hover { border-color: var(--line-strong); }
 .tb-toolbar .cond-body {
   display: flex; flex-direction: column; gap: 4px;
 }
+.tb-toolbar .cond-footer {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
+}
+.tb-toolbar .cond-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.tb-toolbar .cond-add-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent-2);
+  border-color: var(--accent);
+  border-style: solid;
+}
 .tb-toolbar .cond-row {
   display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
 }

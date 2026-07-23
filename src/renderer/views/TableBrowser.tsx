@@ -69,6 +69,17 @@ export function TableBrowser(props: Props): JSX.Element {
     }).length;
   }, [clauses]);
 
+  /**
+   * 当所有筛选条件都被清空（activeClauseCount === 0）但面板仍展开时，
+   * 自动收起面板。点击筛选按钮或底部"+ 添加条件"会重新展开。
+   */
+  useEffect(() => {
+    if (showConditions && activeClauseCount === 0 && clauses.every((c) => c.column === '' && c.value === '')) {
+      setShowConditions(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeClauseCount]);
+
   const composedWhere = useMemo(() => {
     const valid = clauses.filter((c) => {
       if (!c.column) return false;
@@ -288,8 +299,14 @@ export function TableBrowser(props: Props): JSX.Element {
       value: m[3] ?? '',
     };
   };
+  const addRow = () => setRowGroups((rs) => [...rs, [{ column: '', op: '=', value: '' }]]);
   const removeRow = (rowIdx: number) =>
-    setRowGroups((rs) => rs.filter((_, i) => i !== rowIdx));
+    setRowGroups((rs) => {
+      const next = rs.filter((_, i) => i !== rowIdx);
+      // 至少保留一行
+      if (next.length === 0) next.push([{ column: '', op: '=', value: '' }]);
+      return next;
+    });
   const addItemToRow = (rowIdx: number) =>
     setRowGroups((rs) =>
       rs.map((row, i) =>
@@ -302,7 +319,8 @@ export function TableBrowser(props: Props): JSX.Element {
         .map((row, i) =>
           i === rowIdx ? row.filter((_, j) => j !== itemIdx) : row,
         )
-        .filter((row) => row.length > 0),
+        // 保留至少一个空行（避免全删后让面板看起来没东西）
+        .filter((row, i, arr) => row.length > 0 || (arr.length === 1 && i === 0)),
     );
   const updateItem = (rowIdx: number, itemIdx: number, patch: Partial<WhereClause>) =>
     setRowGroups((rs) =>
@@ -361,7 +379,23 @@ export function TableBrowser(props: Props): JSX.Element {
 
         <button
           className={`toggle-btn ${showConditions ? 'active' : ''}`}
-          onClick={() => setShowConditions((s) => !s)}
+          onClick={() => {
+            setShowConditions((s) => {
+              if (s) return false;
+              // 从关闭 → 打开：保证至少有一行
+              if (rowGroups.length === 0) {
+                addRow();
+              } else {
+                // 最后一行如果是空的，不额外加；否则加一个新空行
+                const last = rowGroups[rowGroups.length - 1];
+                const lastActive = last.some(
+                  (c) => c.column && c.value.trim().length > 0,
+                );
+                if (lastActive) addRow();
+              }
+              return true;
+            });
+          }}
           title="点击展开筛选条件构建器"
         >
           筛选 {showConditions ? '▾' : '▸'}
@@ -399,11 +433,6 @@ export function TableBrowser(props: Props): JSX.Element {
 
         {showConditions && (
           <div className="filter-conditions">
-            {activeClauseCount > 0 && (
-              <span className="summary" title={composedWhere}>
-                {composedWhere}
-              </span>
-            )}
             <div className="cond-body">
               {rowGroups.map((row, rowIdx) => (
                 <div key={rowIdx} className="cond-row">
@@ -485,15 +514,6 @@ export function TableBrowser(props: Props): JSX.Element {
                       >
                         ×
                       </button>
-                      {itemIdx === row.length - 1 && (
-                        <button
-                          className="ghost small row-add"
-                          title="在当前行再加一条 AND 条件"
-                          onClick={() => addItemToRow(rowIdx)}
-                        >
-                          +
-                        </button>
-                      )}
                     </span>
                   ))}
                   {rowGroups.length > 1 && (
@@ -507,6 +527,22 @@ export function TableBrowser(props: Props): JSX.Element {
                   )}
                 </div>
               ))}
+            </div>
+            <div className="cond-footer">
+              <button
+                className="cond-add-btn"
+                title="在末尾添加一条新条件"
+                onClick={() => {
+                  // 始终在 rowGroups 最后一行末尾加一个空条件
+                  if (rowGroups.length === 0) {
+                    addRow();
+                  } else {
+                    addItemToRow(rowGroups.length - 1);
+                  }
+                }}
+              >
+                + 添加条件
+              </button>
             </div>
           </div>
         )}
