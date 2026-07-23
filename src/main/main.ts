@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, Menu, shell } from 'electron';
 import path from 'node:path';
 import { registerIpc } from './ipc';
 import { connectionManager } from './connection-manager';
@@ -44,6 +44,9 @@ async function createMainWindow(): Promise<void> {
 }
 
 app.whenReady().then(async () => {
+  // 隐藏默认菜单栏（File / Edit / View / Window / Help）—— 全部功能 UI 自带
+  Menu.setApplicationMenu(null);
+
   registerIpc();
   await createMainWindow();
 
