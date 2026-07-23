@@ -930,8 +930,8 @@ input:hover, select:hover { border-color: var(--line-strong); }
   padding: 3px 4px 3px 4px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  /* 一行固定 4 个条件 */
-  flex: 0 0 calc((100% - 18px) / 4);
+  /* 一行多 4 个：默认给 1/4 宽度，但允许收缩到内容大小 */
+  flex: 1 0 calc((100% - 18px) / 4);
   min-width: 0;
   transition: border-color var(--t-fast);
 }
@@ -962,13 +962,13 @@ input:hover, select:hover { border-color: var(--line-strong); }
 .tb-toolbar .cond-row .col-field {
   flex: 1 1 50px;
   min-width: 50px;
-  max-width: 90px;
+  width: 90px;
 }
 .tb-toolbar .cond-row .col-op    { width: 48px;  flex-shrink: 0; flex-grow: 0; }
 .tb-toolbar .cond-row .col-val   {
   flex: 1 1 50px;
   min-width: 50px;
-  max-width: 110px;
+  width: 120px;
 }
 /* input+select 统一外观 */
 .tb-toolbar .cond-item input,
