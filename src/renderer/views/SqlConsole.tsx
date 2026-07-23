@@ -150,7 +150,7 @@ export function SqlConsole(props: Props): JSX.Element {
             )}
           </div>
         ))}
-        <button className="ghost xs" onClick={newTab}>+</button>
+        <button className="ghost xs" onClick={newTab} title="新建查询 tab">+ 新建</button>
       </div>
       <div className="editor-area">
         <SqlEditor

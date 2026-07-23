@@ -259,7 +259,7 @@ export function App(): JSX.Element {
               </div>
             ))}
 
-            <button className="ghost xs" onClick={() => newSqlTab()}>+ 查询</button>
+            <button className="worktabs-add" onClick={() => newSqlTab()}>查询</button>
           </div>
 
           <div className="workbody">

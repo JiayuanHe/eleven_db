@@ -52,6 +52,8 @@ interface Props {
   onPendingInsertCell?: (rowIndex: number, column: string, newValue: unknown) => void;
   /** 编辑模式：单元格渲染为 input，可直接修改后提交 */
   editing?: boolean;
+  /** 是否启用列头点击排序（默认 true） */
+  sortable?: boolean;
 }
 
 export function ResultTable(props: Props): JSX.Element {
@@ -75,6 +77,46 @@ export function ResultTable(props: Props): JSX.Element {
   const pkSet = useMemo(() => new Set(primaryKeys ?? []), [primaryKeys]);
   const inserts = pendingInserts ?? [];
   const allSelected = rows.length > 0 && selected && selected.size === rows.length;
+  const sortable = props.sortable !== false;
+
+  // 排序状态：{ col, dir: 'asc' | 'desc' }
+  const [sort, setSort] = useState<{ col: string; dir: 'asc' | 'desc' } | null>(null);
+
+  const cycleSort = (colName: string) => {
+    setSort((prev) => {
+      if (!prev || prev.col !== colName) return { col: colName, dir: 'asc' };
+      if (prev.dir === 'asc') return { col: colName, dir: 'desc' };
+      return null; // 第三次点击取消排序
+    });
+  };
+
+  // 根据 sort 对 rows 排序（in-place 拷贝，不动原数组）
+  const sortedRows = useMemo(() => {
+    if (!sort) return rows;
+    const { col, dir } = sort;
+    const mul = dir === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const av = a[col];
+      const bv = b[col];
+      // null 始终在末尾
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      // 数字
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * mul;
+      // 日期 / ISO 字符串
+      if (typeof av === 'string' && typeof bv === 'string') {
+        const an = Number(av);
+        const bn = Number(bv);
+        if (!Number.isNaN(an) && !Number.isNaN(bn) && av !== '' && bv !== '') {
+          return (an - bn) * mul;
+        }
+        return av.localeCompare(bv) * mul;
+      }
+      // 其他：转字符串比较
+      return String(av).localeCompare(String(bv)) * mul;
+    });
+  }, [rows, sort]);
 
   // 当前正在内联编辑的单元格
   const [localEdit, setLocalEdit] = useState<{ rowIndex: number; column: string; value: string } | null>(null);
@@ -117,11 +159,31 @@ export function ResultTable(props: Props): JSX.Element {
                   title="全选 / 全不选"
                 />
               </th>
-              {columns.map((c) => (
-                <th key={c.name} className={pkSet.has(c.name) ? 'pk' : ''}>
-                  {c.name}
-                </th>
-              ))}
+              {columns.map((c) => {
+                const isSorted = sort?.col === c.name;
+                const sortDir = isSorted ? sort!.dir : null;
+                const cls = [
+                  pkSet.has(c.name) ? 'pk' : '',
+                  sortable ? 'sortable' : '',
+                  isSorted ? `sorted-${sortDir}` : '',
+                ].filter(Boolean).join(' ');
+                return (
+                  <th
+                    key={c.name}
+                    className={cls}
+                    onClick={sortable ? () => cycleSort(c.name) : undefined}
+                    title={sortable ? '点击切换排序' : undefined}
+                  >
+                    <span className="th-name">{c.name}</span>
+                    {sortable && (
+                      <span className="sort-ind" aria-hidden>
+                        <span className={'arrow up' + (isSorted && sortDir === 'asc' ? ' active' : '')}>▲</span>
+                        <span className={'arrow down' + (isSorted && sortDir === 'desc' ? ' active' : '')}>▼</span>
+                      </span>
+                    )}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -169,7 +231,7 @@ export function ResultTable(props: Props): JSX.Element {
               </tr>
             ))}
 
-            {rows.map((row, i) => {
+            {sortedRows.map((row, i) => {
               const rowChanges = changes?.get(i);
               const dirtyCols = new Set(rowChanges?.map((ch) => ch.column) ?? []);
               const isSelected = selected?.has(i) ?? false;

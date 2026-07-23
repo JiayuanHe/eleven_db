@@ -520,6 +520,61 @@ input:hover, select:hover { border-color: var(--line-strong); }
   color: var(--accent);
 }
 
+/* +查询 / +新查询 tab 按钮：比 tab 本身更醒目 */
+.worktabs-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--bg-1);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all var(--t-fast);
+  margin-bottom: 5px;
+  white-space: nowrap;
+}
+.worktabs-add:hover {
+  background: var(--accent-soft);
+  color: var(--accent-2);
+  border-color: var(--accent);
+  border-style: solid;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+.worktabs-add:active {
+  transform: translateY(0);
+}
+.worktabs-add::before {
+  content: '+';
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* SQL 控制台内部 tab 的 + 按钮（小一点） */
+.sql-console .tab-bar > button {
+  margin-bottom: 4px;
+  margin-left: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--bg-1);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+}
+.sql-console .tab-bar > button:hover {
+  background: var(--accent-soft);
+  color: var(--accent-2);
+  border-color: var(--accent);
+  border-style: solid;
+}
+
 .tab-dropdown-wrap {
   position: relative;
 }
@@ -619,8 +674,59 @@ input:hover, select:hover { border-color: var(--line-strong); }
   cursor: pointer;
   user-select: none;
   border-bottom: 2px solid var(--line-strong);
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.result-table th.sortable:hover {
+  background: var(--bg-3);
+  color: var(--text);
+}
+.result-table th.sorted-asc,
+.result-table th.sorted-desc {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.result-table th .th-name {
+  vertical-align: middle;
+}
+.result-table th .sort-ind {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-left: 6px;
+  vertical-align: middle;
+  line-height: 1;
+  font-size: 8px;
+  color: var(--muted);
+  position: relative;
+  height: 14px;
+  width: 9px;
+}
+.result-table th .sort-ind .arrow {
+  display: block;
+  font-size: 8px;
+  line-height: 1;
+  transition: color var(--t-fast), transform var(--t-fast);
+  opacity: 0.4;
+}
+.result-table th .sort-ind .arrow.up {
+  margin-bottom: 1px;
+}
+.result-table th .sort-ind .arrow.down {
+  margin-top: 1px;
+}
+.result-table th .sort-ind .arrow.active {
+  color: var(--accent);
+  opacity: 1;
 }
 .result-table th.pk { color: var(--pk); }
+.result-table th.pk.sorted-asc,
+.result-table th.pk.sorted-desc {
+  color: var(--pk);
+  background: var(--pk-soft);
+}
+.result-table th.pk .sort-ind .arrow.active {
+  color: var(--pk);
+}
 .result-table tbody tr { transition: background var(--t-fast); }
 .result-table tbody tr:hover td { background: var(--bg-2); }
 .result-table tr.dirty td { background: var(--warn-soft); }
