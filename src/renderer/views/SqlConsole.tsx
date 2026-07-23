@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ConnectionConfig, QueryResult, SchemaObject } from '../../shared/types';
 import { call, toast } from '../lib/api';
 import { SqlEditor } from '../components/SqlEditor';
@@ -115,10 +115,16 @@ export function SqlConsole(props: Props): JSX.Element {
     if (file) toast.push(`已导出 ${file}`, 'success');
   };
 
+  // 切换连接时清空（避免展示错连结果）。
+  // 注意：首次 mount 时不能清空，否则会覆盖 useState 里的 initialSql
+  // （右键菜单"生成 SELECT 模板"创建的新 tab 依赖 initialSql）。
+  const prevConnIdRef = useRef<string>(props.conn.id);
   useEffect(() => {
-    // 切换连接时清空（避免展示错连结果）
-    setTabs([{ id: '1', title: '查询 1', sql: '', result: null, loading: false, error: null, elapsedMs: 0 }]);
-    setActiveId('1');
+    if (prevConnIdRef.current !== props.conn.id) {
+      prevConnIdRef.current = props.conn.id;
+      setTabs([{ id: '1', title: '查询 1', sql: '', result: null, loading: false, error: null, elapsedMs: 0 }]);
+      setActiveId('1');
+    }
   }, [props.conn.id]);
 
   return (
