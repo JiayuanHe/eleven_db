@@ -6,9 +6,7 @@ import { PaginationIcon } from '../components/PaginationIcon';
 import { toCsv } from '../lib/csv';
 import {
   OPERATORS,
-  COMBINATORS,
   Op,
-  Combinator,
   WhereClause,
   defaultSuggestions,
   combine,
@@ -49,9 +47,9 @@ export function TableBrowser(props: Props): JSX.Element {
   const [rowGroups, setRowGroups] = useState<WhereClause[][]>([
     [{ column: '', op: '=', value: '' }],
   ]);
-  const [combinator, setCombinator] = useState<Combinator>('AND');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advanced, setAdvanced] = useState('');
+  const [orderBy, setOrderBy] = useState('');
   const [showConditions, setShowConditions] = useState(false);
 
   // CRUD 状态
@@ -77,9 +75,10 @@ export function TableBrowser(props: Props): JSX.Element {
       if (c.op === 'IS NULL' || c.op === 'IS NOT NULL') return true;
       return c.value.trim().length > 0;
     });
-    const combined = combine(valid, combinator);
+    // 多条件默认全部以 AND 连接。OR 请使用高级 WHERE。
+    const combined = combine(valid, 'AND');
     return withAdvanced(combined, advanced);
-  }, [clauses, combinator, advanced]);
+  }, [clauses, advanced]);
 
   // 待提交总变更数
   const pendingCount = changes.size + pendingInserts.length + selected.size;
@@ -96,6 +95,7 @@ export function TableBrowser(props: Props): JSX.Element {
       );
       setSchema(cols);
       const whereFinal = overrideWhere !== undefined ? overrideWhere : composedWhere;
+      const orderByFinal = orderBy.trim() || undefined;
       const r = await call<QueryResult>(
         window.api.table.data({
           id: props.conn.id,
@@ -104,6 +104,7 @@ export function TableBrowser(props: Props): JSX.Element {
           page,
           pageSize,
           where: whereFinal,
+          orderBy: orderByFinal,
         }),
       );
       setResult(r);
@@ -120,8 +121,8 @@ export function TableBrowser(props: Props): JSX.Element {
     setSelected(new Set());
     setPendingInserts([]);
     setRowGroups([[{ column: '', op: '=', value: '' }]]);
-    setCombinator('AND');
     setAdvanced('');
+    setOrderBy('');
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.database, props.table, props.conn.id]);
@@ -131,7 +132,7 @@ export function TableBrowser(props: Props): JSX.Element {
     setPage(1);
     reload(composedWhere);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clauses, combinator, advanced]);
+  }, [clauses, advanced]);
 
   // ---------- 单元格编辑 ----------
   const onCellChange = (rowIndex: number, column: string, newValue: unknown) => {
@@ -354,7 +355,7 @@ export function TableBrowser(props: Props): JSX.Element {
         <button
           className={`toggle-btn ${showAdvanced ? 'active' : ''}`}
           onClick={() => setShowAdvanced((s) => !s)}
-          title="手写 WHERE 条件"
+          title="手写 WHERE / ORDER BY"
         >
           高级 {showAdvanced ? '▾' : '▸'}
         </button>
@@ -372,48 +373,44 @@ export function TableBrowser(props: Props): JSX.Element {
 
         {showAdvanced && (
           <div className="filter-advanced">
-            <span className="adv-label">高级 WHERE：</span>
-            <input
-              placeholder="例如 status = 'active' AND created_at > '2025-01-01'"
-              value={advanced}
-              onChange={(e) => setAdvanced(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') reload();
-              }}
-            />
+            <div className="adv-row">
+              <span className="adv-label">WHERE</span>
+              <input
+                placeholder="例如 status = 'active' AND created_at > '2025-01-01'"
+                value={advanced}
+                onChange={(e) => setAdvanced(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') reload();
+                }}
+              />
+            </div>
+            <div className="adv-row">
+              <span className="adv-label">ORDER BY</span>
+              <input
+                placeholder="例如 id DESC 或 name ASC, created_at DESC"
+                value={orderBy}
+                onChange={(e) => setOrderBy(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') reload();
+                }}
+              />
+            </div>
           </div>
         )}
 
         {showConditions && (
           <div className="filter-conditions">
-            <div className="cond-toggle">
-              {activeClauseCount > 0 && (
-                <span className="summary" title={composedWhere}>
-                  {composedWhere}
-                </span>
-              )}
-            </div>
+            {activeClauseCount > 0 && (
+              <span className="summary" title={composedWhere}>
+                {composedWhere}
+              </span>
+            )}
             <div className="cond-body">
-              <div className="cond-row cond-header">
-                <span className="cond-label">组合方式</span>
-                <select
-                  className="col-op"
-                  value={combinator}
-                  onChange={(e) => setCombinator(e.target.value as Combinator)}
-                  title="行间 / 行内的组合方式"
-                >
-                  {COMBINATORS.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-                <button className="ghost small" onClick={addRow}>+ 新行</button>
-                <span className="muted small" style={{ marginLeft: 'auto' }}>
-                  行内可放多条；超过 3 条建议开新行
-                </span>
-              </div>
-
               {rowGroups.map((row, rowIdx) => (
                 <div key={rowIdx} className="cond-row">
+                  {row.length > 1 && rowIdx === 0 && (
+                    <span className="row-connector" title="同一行内用 AND 连接">AND</span>
+                  )}
                   {row.map((cl, itemIdx) => (
                     <span key={itemIdx} className="cond-item">
                       <select
@@ -492,30 +489,35 @@ export function TableBrowser(props: Props): JSX.Element {
                       >
                         ×
                       </button>
+                      {itemIdx === row.length - 1 && (
+                        <button
+                          className="ghost small row-add"
+                          title="在当前行再加一条 AND 条件"
+                          onClick={() => addItemToRow(rowIdx)}
+                        >
+                          +
+                        </button>
+                      )}
                     </span>
                   ))}
-
-                  {row.length > 1 && (
-                    <span className="row-connector" title="行内按上方组合方式串联">
-                      {combinator}
-                    </span>
+                  {rowIdx === rowGroups.length - 1 && (
+                    <button
+                      className="ghost small row-add-new"
+                      title="新起一行"
+                      onClick={addRow}
+                    >
+                      + 新行
+                    </button>
                   )}
-
-                  <button
-                    className="ghost small row-add"
-                    title="在当前行再加一条"
-                    onClick={() => addItemToRow(rowIdx)}
-                  >
-                    +
-                  </button>
-                  <button
-                    className="ghost small row-del"
-                    title="删除整行"
-                    onClick={() => removeRow(rowIdx)}
-                    disabled={rowGroups.length === 1}
-                  >
-                    ×
-                  </button>
+                  {rowGroups.length > 1 && (
+                    <button
+                      className="ghost small row-del"
+                      title="删除整行"
+                      onClick={() => removeRow(rowIdx)}
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

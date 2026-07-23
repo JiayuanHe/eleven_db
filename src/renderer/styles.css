@@ -520,11 +520,11 @@ input:hover, select:hover { border-color: var(--line-strong); }
   color: var(--accent);
 }
 
-/* +查询 / +新查询 tab 按钮：无边框，hover 高亮 */
+/* +查询 / +新查询 tab 按钮：无边框，hover 高亮，与 tab 同行对齐 */
 .worktabs-add {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   margin-left: 4px;
   padding: 8px 12px;
   font-size: 12px;
@@ -535,7 +535,8 @@ input:hover, select:hover { border-color: var(--line-strong); }
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--t-fast);
-  margin-bottom: 5px;
+  margin-bottom: -1px;     /* 与 .worktab 对齐 border-bottom */
+  height: auto;            /* 跟随内容高度 */
   white-space: nowrap;
 }
 .worktabs-add:hover {
@@ -819,22 +820,28 @@ input:hover, select:hover { border-color: var(--line-strong); }
   flex-direction: column;
   gap: 6px;
   margin-top: 6px;
-  padding: 6px 10px;
+  padding: 8px 12px;
   background: var(--bg-2);
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
 }
-.tb-toolbar .filter-advanced {
-  flex-direction: row;
+.tb-toolbar .filter-advanced .adv-row {
+  display: flex;
   align-items: center;
+  gap: 8px;
 }
 .tb-toolbar .filter-advanced select,
 .tb-toolbar .filter-advanced input { font-size: 12px; }
 .tb-toolbar .filter-advanced input { flex: 1; min-width: 100px; }
 .tb-toolbar .filter-advanced .adv-label {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--text-2);
+  font-weight: 600;
+  letter-spacing: 0.5px;
   flex-shrink: 0;
+  min-width: 70px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
 }
 
 /* 折叠按钮 (“筛选”、“高级”) */
@@ -871,11 +878,7 @@ input:hover, select:hover { border-color: var(--line-strong); }
   text-align: center;
 }
 
-.tb-toolbar .cond-toggle {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 12px; color: var(--muted);
-}
-.tb-toolbar .cond-toggle .summary {
+.tb-toolbar .summary {
   color: var(--text-2);
   background: var(--bg-1);
   padding: 3px 8px;
@@ -928,23 +931,30 @@ input:hover, select:hover { border-color: var(--line-strong); }
   font-size: 12px; font-weight: 600;
   flex-shrink: 0;
 }
+.tb-toolbar .cond-row .row-add-new {
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  transition: all var(--t-fast);
+}
+.tb-toolbar .cond-row .row-add-new:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  border-style: solid;
+  color: var(--accent-2);
+}
 .tb-toolbar .cond-row .row-del {
   width: 22px; padding: 0 4px;
   flex-shrink: 0;
-}
-.tb-toolbar .cond-header {
-  display: flex; gap: 8px; align-items: center;
-  font-size: 11px;
   color: var(--muted);
 }
-.tb-toolbar .cond-header .cond-label {
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 500;
-}
-.tb-toolbar .cond-header .muted {
-  font-size: 11px;
-  color: var(--muted);
+.tb-toolbar .cond-row .row-del:hover {
+  color: var(--danger);
 }
 .tb-statusbar {
   display: flex; gap: 12px; align-items: center;
