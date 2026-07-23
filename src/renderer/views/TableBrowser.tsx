@@ -409,21 +409,21 @@ export function TableBrowser(props: Props): JSX.Element {
                 <div key={rowIdx} className="cond-row">
                   {row.map((cl, itemIdx) => (
                     <span key={itemIdx} className="cond-item">
-                      <select
+                      <input
                         className="col-field"
+                        list={`col-list-${rowIdx}-${itemIdx}`}
+                        placeholder="请选字段"
                         value={cl.column}
                         onChange={(e) =>
                           updateItem(rowIdx, itemIdx, { column: e.target.value, value: '' })
                         }
-                        title="字段"
-                      >
-                        <option value="">— 字段 —</option>
+                        title="字段（可直接输入搜索）"
+                      />
+                      <datalist id={`col-list-${rowIdx}-${itemIdx}`}>
                         {schema.map((c) => (
-                          <option key={c.name} value={c.name}>
-                            {c.name} ({c.type}){c.isPrimary ? ' [PK]' : ''}
-                          </option>
+                          <option key={c.name} value={c.name}>{c.name}</option>
                         ))}
-                      </select>
+                      </datalist>
                       <select
                         className="col-op"
                         value={cl.op}
