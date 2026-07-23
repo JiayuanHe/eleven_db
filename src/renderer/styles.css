@@ -930,10 +930,15 @@ input:hover, select:hover { border-color: var(--line-strong); }
   padding: 3px 4px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  /* 一行固定 3 个条件 */
-  flex: 0 0 calc((100% - 12px) / 3);
+  /* 一行固定 4 个条件 */
+  flex: 0 0 calc((100% - 18px) / 4);
   min-width: 0;
   transition: border-color var(--t-fast);
+}
+@media (max-width: 1200px) {
+  .tb-toolbar .cond-item {
+    flex: 0 0 calc((100% - 12px) / 3);
+  }
 }
 @media (max-width: 900px) {
   .tb-toolbar .cond-item {
@@ -952,15 +957,15 @@ input:hover, select:hover { border-color: var(--line-strong); }
 .tb-toolbar .cond-row select,
 .tb-toolbar .cond-row input { font-size: 12px; }
 .tb-toolbar .cond-row .col-field {
-  flex: 1 1 60px;
-  min-width: 60px;
-  max-width: 120px;
+  flex: 1 1 50px;
+  min-width: 50px;
+  max-width: 90px;
 }
-.tb-toolbar .cond-row .col-op    { width: 56px;  flex-shrink: 0; flex-grow: 0; }
+.tb-toolbar .cond-row .col-op    { width: 48px;  flex-shrink: 0; flex-grow: 0; }
 .tb-toolbar .cond-row .col-val   {
-  flex: 1 1 60px;
-  min-width: 60px;
-  max-width: 140px;
+  flex: 1 1 50px;
+  min-width: 50px;
+  max-width: 110px;
 }
 /* input+select 统一外观 */
 .tb-toolbar .cond-item input,
