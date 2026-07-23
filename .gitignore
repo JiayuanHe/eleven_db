@@ -8,4 +8,4 @@ out/
 release/
 data/
 *.tsbuildinfo
-.cache/
+.cache/main.js

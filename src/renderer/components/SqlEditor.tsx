@@ -1,6 +1,11 @@
 import { useEffect, useRef } from 'react';
 import * as monaco from 'monaco-editor';
 
+/** 读取全局主题：light/dark */
+function getAppTheme(): 'vs' | 'vs-dark' {
+  return document.documentElement.dataset.theme === 'dark' ? 'vs-dark' : 'vs';
+}
+
 /**
  * 直接用 monaco-editor；Vite 通过 Vite 静态 import 打包到渲染层。
  *
@@ -119,7 +124,7 @@ export function SqlEditor(props: SqlEditorProps): JSX.Element {
     const editor = monaco.editor.create(ref.current, {
       value: props.value,
       language: props.language ?? 'mysql',
-      theme: 'vs-dark',
+      theme: getAppTheme(),
       automaticLayout: true,
       minimap: { enabled: false },
       fontSize: 13,

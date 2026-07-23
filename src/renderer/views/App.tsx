@@ -8,6 +8,7 @@ import { SqlConsole } from './SqlConsole';
 import { TableBrowser } from './TableBrowser';
 import { RedisBrowser } from './RedisBrowser';
 import { TableDetailModal } from '../components/TableDetailModal';
+import { SplashScreen } from '../components/SplashScreen';
 import { toast, call } from '../lib/api';
 import { useTheme } from '../lib/theme';
 import { useLayout } from '../lib/layout';
@@ -48,7 +49,7 @@ export function App(): JSX.Element {
     { db: string; table: string; mode: 'view' | 'edit' } | null
   >(null);
   const [status, setStatus] = useState<string>('就绪');
-  const [theme, toggleTheme] = useTheme();
+  const [theme, , setTheme] = useTheme();
   const layout = useLayout();
   const [connStatuses, setConnStatuses] = useState<Record<string, ConnectionStatus>>({});
   const [ctx, setCtx] = useState<{ x: number; y: number; tabId: string } | null>(null);
@@ -145,9 +146,17 @@ export function App(): JSX.Element {
         <div className="theme-toggle" role="group" aria-label="主题切换">
           <button
             className={theme === 'light' ? 'active' : ''}
-            onClick={() => toggleTheme()}
+            onClick={() => setTheme('light')}
+            title="浅色主题"
           >
-            {theme === 'light' ? '☀ 亮色' : '☾ 暗色'}
+            ☀
+          </button>
+          <button
+            className={theme === 'dark' ? 'active' : ''}
+            onClick={() => setTheme('dark')}
+            title="深色主题"
+          >
+            ☾
           </button>
         </div>
       </header>
@@ -335,6 +344,8 @@ export function App(): JSX.Element {
           }}
         />
       )}
+
+      <SplashScreen />
     </div>
   );
 }
