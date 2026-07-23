@@ -88,7 +88,7 @@ export function App(): JSX.Element {
   const openTableDetail = (db: string, table: string, mode: 'view' | 'edit' = 'view') => {
     setDetailTarget({ db, table, mode });
   };
-  const [dropdownOpen, setDropdownOpen] = useState<'left' | 'right' | 'others' | 'all' | null>(null);
+  
 
   const closeTab = (id: string) => {
     setTabs((ts) => ts.filter((t) => t.id !== id));
@@ -99,24 +99,20 @@ export function App(): JSX.Element {
     if (idx <= 0) return;
     setTabs((ts) => ts.slice(idx));
     setActiveTabId(id);
-    setDropdownOpen(null);
   };
   const closeRightTabs = (id: string) => {
     const idx = tabs.findIndex((t) => t.id === id);
     if (idx < 0 || idx >= tabs.length - 1) return;
     setTabs((ts) => ts.slice(0, idx + 1));
-    setDropdownOpen(null);
   };
   const closeOtherTabs = (id: string) => {
     setTabs((ts) => ts.filter((t) => t.id === id));
     setActiveTabId(id);
-    setDropdownOpen(null);
   };
   const closeAllTabs = () => {
     const newId = String(Date.now());
     setTabs([{ id: newId, kind: 'sql', title: '查询 1' }]);
     setActiveTabId(newId);
-    setDropdownOpen(null);
   };
 
   const showSidebar = layout.sizes.sidebar > 0;
@@ -124,7 +120,6 @@ export function App(): JSX.Element {
   return (
     <div
       className="app"
-      onClick={() => { if (dropdownOpen) setDropdownOpen(null); }}
       style={
         {
           '--col-sidebar': `${layout.sizes.sidebar}px`,
@@ -237,7 +232,6 @@ export function App(): JSX.Element {
                 onContextMenu={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setDropdownOpen(null);
                   setCtx({ x: e.clientX, y: e.clientY, tabId: t.id });
                 }}
               >
@@ -255,17 +249,7 @@ export function App(): JSX.Element {
                 )}
               </div>
             ))}
-            <div className="tab-dropdown-wrap" onClick={(e) => e.stopPropagation()}>
-              <button className="ghost xs" onClick={() => setDropdownOpen(dropdownOpen ? null : 'all')}>⋮</button>
-              {dropdownOpen && (
-                <div className="tab-dropdown">
-                  <button className="ctx-item" onClick={() => { closeLeftTabs(activeTabId); }}>关闭左侧所有标签</button>
-                  <button className="ctx-item" onClick={() => { closeRightTabs(activeTabId); }}>关闭右侧所有标签</button>
-                  <button className="ctx-item" onClick={() => { closeOtherTabs(activeTabId); }}>关闭其他标签</button>
-                  <button className="ctx-item danger" onClick={() => { closeAllTabs(); }}>关闭所有标签</button>
-                </div>
-              )}
-            </div>
+
             <button className="ghost xs" onClick={() => newSqlTab()}>+ 查询</button>
           </div>
 
