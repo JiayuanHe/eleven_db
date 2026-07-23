@@ -123,6 +123,16 @@ const api = {
   },
   exportCsv: (defaultName: string, csv: string) =>
     invoke<string | false>(IPC.export.csv, { defaultName, csv }),
+  exportSql: (defaultName: string, sql: string) =>
+    invoke<string | false>(IPC.export.sql, { defaultName, sql }),
+  pickFile: (ext: 'csv' | 'sql') =>
+    invoke<string | false>(IPC.import.pickFile, ext),
+  readFile: (path: string) =>
+    invoke<string>(IPC.import.readFile, path),
+  dumpDatabase: (args: { id: string; database: string; password?: string }) =>
+    invoke<string>(IPC.dump.database, args),
+  execSql: (args: { id: string; sql: string; password?: string }) =>
+    invoke<{ executed: number }>(IPC.dump.execSql, args),
   app: {
     version: () => invoke<string>(IPC.app.version),
   },

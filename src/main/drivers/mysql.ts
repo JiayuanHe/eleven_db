@@ -345,6 +345,66 @@ export class MysqlDriver implements ConnectionDriver {
     };
   }
 
+  /**
+   * 转储整个数据库为 SQL 脚本（包含 CREATE + INSERT）。
+   * 简化版：不含视图/存储过程/触发器，只导表结构和数据。
+   */
+  async dumpDatabase(database: string): Promise<string> {
+    const out: string[] = [];
+    out.push(`-- Eleven DB dump`);
+    out.push(`-- Database: \`${database}\``);
+    out.push(`-- Generated at ${new Date().toISOString()}`);
+    out.push('');
+    out.push('SET NAMES utf8mb4;');
+    out.push('SET FOREIGN_KEY_CHECKS = 0;');
+    out.push('');
+
+    // 列出所有表
+    const [tables] = await this.getPool().query<RowDataPacket[]>(
+      'SELECT TABLE_NAME AS name FROM information_schema.tables WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = "BASE TABLE" ORDER BY TABLE_NAME',
+      [database],
+    );
+    for (const t of tables) {
+      const tbl = String(t.name);
+      // SHOW CREATE TABLE
+      const [ddlRows] = await this.getPool().query<RowDataPacket[]>(
+        `SHOW CREATE TABLE \`${database}\`.\`${tbl}\``,
+      );
+      const ddl = String((ddlRows[0] as any)['Create Table'] ?? '');
+      out.push(`DROP TABLE IF EXISTS \`${tbl}\`;`);
+      out.push(ddl + ';');
+      // 数据导出
+      const [dataRows] = await this.getPool().query<RowDataPacket[]>(
+        `SELECT * FROM \`${database}\`.\`${tbl}\``,
+      );
+      if (dataRows.length > 0) {
+        const cols = Object.keys(dataRows[0]);
+        const colList = cols.map((c) => `\`${c}\``).join(', ');
+        const batchSize = 200;
+        for (let i = 0; i < dataRows.length; i += batchSize) {
+          const batch = dataRows.slice(i, i + batchSize);
+          const values = batch
+            .map((row) => {
+              const vals = cols.map((c) => {
+                const v = (row as any)[c];
+                if (v === null || v === undefined) return 'NULL';
+                if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+                if (typeof v === 'boolean') return v ? '1' : '0';
+                const s = String(v).replace(/'/g, "''").replace(/\\/g, '\\\\');
+                return `'${s}'`;
+              });
+              return `(${vals.join(', ')})`;
+            })
+            .join(',\n');
+          out.push(`INSERT INTO \`${tbl}\` (${colList}) VALUES\n${values};`);
+        }
+      }
+      out.push('');
+    }
+    out.push('SET FOREIGN_KEY_CHECKS = 1;');
+    return out.join('\n');
+  }
+
   async execute(sql: string): Promise<QueryResult> {
     const start = Date.now();
     // 简化：多条语句拆开逐条执行，最后合并

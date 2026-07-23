@@ -85,6 +85,9 @@ export interface ConnectionDriver {
   /** 导出全部数据（无分页） */
   fetchAll(options: { database?: string; table: string; where?: string }): Promise<QueryResult>;
 
+  /** 转储整个数据库为 SQL 脚本（CREATE + INSERT） */
+  dumpDatabase?(database: string): Promise<string>;
+
   /** 执行任意 SQL；多条以 ; 分隔时按条返回（影响行数取最后一条） */
   execute(sql: string): Promise<QueryResult>;
 

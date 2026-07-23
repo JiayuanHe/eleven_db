@@ -917,36 +917,10 @@ input:hover, select:hover { border-color: var(--line-strong); }
 .tb-toolbar .cond-row .col-val   { width: 160px; flex-shrink: 1; min-width: 80px; }
 .tb-toolbar .cond-row .col-sug   { width: 90px;  flex-shrink: 0; }
 .tb-toolbar .cond-row .col-del   { width: 22px; padding: 0 4px; flex-shrink: 0; }
-.tb-toolbar .cond-row .row-connector {
-  font-size: 10px; color: var(--accent);
-  background: var(--bg-1);
-  padding: 1px 6px;
-  border-radius: var(--radius-xs);
-  font-weight: 600;
-  flex-shrink: 0;
-  border: 1px solid var(--line);
-}
 .tb-toolbar .cond-row .row-add {
   width: 22px; padding: 0 4px;
   font-size: 12px; font-weight: 600;
   flex-shrink: 0;
-}
-.tb-toolbar .cond-row .row-add-new {
-  padding: 0 10px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--accent);
-  background: transparent;
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-  transition: all var(--t-fast);
-}
-.tb-toolbar .cond-row .row-add-new:hover {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  border-style: solid;
-  color: var(--accent-2);
 }
 .tb-toolbar .cond-row .row-del {
   width: 22px; padding: 0 4px;

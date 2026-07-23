@@ -65,6 +65,20 @@ export const IPC = {
   },
   export: {
     csv: 'export.csv',
+    /** 保存 SQL 文本到文件 */
+    sql: 'export.sql',
+  },
+  import: {
+    /** 弹出文件选择对话框，返回文件路径 */
+    pickFile: 'import.pickFile',
+    /** 读取文件内容（utf-8） */
+    readFile: 'import.readFile',
+  },
+  dump: {
+    /** 转储整个数据库的 CREATE + INSERT SQL */
+    database: 'dump.database',
+    /** 执行多语句 SQL（用于导入 SQL 文件） */
+    execSql: 'dump.execSql',
   },
   app: {
     version: 'app.version',

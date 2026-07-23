@@ -28,6 +28,14 @@ type Props =
       onInsertSqlTemplate?: (sql: string) => void;
       /** 打开表详情/编辑弹窗；mode='view' | 'edit' */
       onShowTableDetail?: (db: string, table: string, mode?: 'view' | 'edit') => void;
+      /** 导出表 (CSV) */
+      onExportTable?: (db: string, table: string) => void;
+      /** 导入 CSV 到表 */
+      onImportTable?: (db: string, table: string) => void;
+      /** 导出整个数据库 (SQL) */
+      onExportDatabase?: (db: string) => void;
+      /** 导入 SQL 文件到数据库 */
+      onImportDatabase?: (db: string) => void;
     }
   | {
       connection: ConnectionConfig;
@@ -278,7 +286,14 @@ export function SchemaTree(props: Props): JSX.Element {
         if (props.kind === 'mysql' && isSearching && (filtered?.length ?? 0) === 0) return null;
         return (
           <div key={db.name} className="schema-node">
-            <div className="db" onClick={() => toggleDb(db.name)}>
+            <div
+              className="db"
+              onClick={() => toggleDb(db.name)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setCtx({ x: e.clientX, y: e.clientY, db: db.name, obj: { name: db.name, type: 'table' } });
+              }}
+            >
               <span className={`caret ${isOpen ? 'open' : ''}`}>▸</span>
               <SchemaIcon kind="db" className="icon-db" />
               {db.name}
@@ -363,36 +378,57 @@ export function SchemaTree(props: Props): JSX.Element {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="ctx-menu-header">[{ctx.db}] {ctx.obj.name}</div>
-            <button className="ctx-item" onClick={() => { props.onInsertSqlTemplate?.(buildSqlTemplate(ctx.db, ctx.obj, 'select')); setCtx(null); }}>
-              生成 SELECT 模板
-            </button>
-            <button className="ctx-item" onClick={() => { props.onInsertSqlTemplate?.(buildSqlTemplate(ctx.db, ctx.obj, 'count')); setCtx(null); }}>
-              生成 COUNT(*) 模板
-            </button>
-            <button
-              className="ctx-item"
-              onClick={() => {
-                props.onShowTableDetail?.(ctx.db, ctx.obj.name, 'view');
-                setCtx(null);
-              }}
-            >
-              查看表详情
-            </button>
-            <button
-              className="ctx-item"
-              onClick={() => {
-                props.onShowTableDetail?.(ctx.db, ctx.obj.name, 'edit');
-                setCtx(null);
-              }}
-            >
-              编辑表结构
-            </button>
-            <button className="ctx-item" onClick={() => { props.onInsertSqlTemplate?.(buildSqlTemplate(ctx.db, ctx.obj, 'truncate')); setCtx(null); }}>
-              清空表 (TRUNCATE 模板)
-            </button>
-            <button className="ctx-item danger" onClick={() => { props.onInsertSqlTemplate?.(buildSqlTemplate(ctx.db, ctx.obj, 'drop')); setCtx(null); }}>
-              删除表 (DROP 模板 ⚠)
-            </button>
+            {ctx.obj.type === 'table' && ctx.obj.name === ctx.db ? (
+              // 数据库节点右键
+              <>
+                <button className="ctx-item" onClick={() => { props.onExportDatabase?.(ctx.db); setCtx(null); }}>
+                  导出整个数据库 (SQL)
+                </button>
+                <button className="ctx-item" onClick={() => { props.onImportDatabase?.(ctx.db); setCtx(null); }}>
+                  导入 SQL 文件
+                </button>
+              </>
+            ) : (
+              // 表节点右键
+              <>
+                <button className="ctx-item" onClick={() => { props.onInsertSqlTemplate?.(buildSqlTemplate(ctx.db, ctx.obj, 'select')); setCtx(null); }}>
+                  生成 SELECT 模板
+                </button>
+                <button className="ctx-item" onClick={() => { props.onInsertSqlTemplate?.(buildSqlTemplate(ctx.db, ctx.obj, 'count')); setCtx(null); }}>
+                  生成 COUNT(*) 模板
+                </button>
+                <button
+                  className="ctx-item"
+                  onClick={() => {
+                    props.onShowTableDetail?.(ctx.db, ctx.obj.name, 'view');
+                    setCtx(null);
+                  }}
+                >
+                  查看表详情
+                </button>
+                <button
+                  className="ctx-item"
+                  onClick={() => {
+                    props.onShowTableDetail?.(ctx.db, ctx.obj.name, 'edit');
+                    setCtx(null);
+                  }}
+                >
+                  编辑表结构
+                </button>
+                <button className="ctx-item" onClick={() => { props.onExportTable?.(ctx.db, ctx.obj.name); setCtx(null); }}>
+                  导出表 (CSV)
+                </button>
+                <button className="ctx-item" onClick={() => { props.onImportTable?.(ctx.db, ctx.obj.name); setCtx(null); }}>
+                  导入 CSV 到表
+                </button>
+                <button className="ctx-item" onClick={() => { props.onInsertSqlTemplate?.(buildSqlTemplate(ctx.db, ctx.obj, 'truncate')); setCtx(null); }}>
+                  清空表 (TRUNCATE 模板)
+                </button>
+                <button className="ctx-item danger" onClick={() => { props.onInsertSqlTemplate?.(buildSqlTemplate(ctx.db, ctx.obj, 'drop')); setCtx(null); }}>
+                  删除表 (DROP 模板 ⚠)
+                </button>
+              </>
+            )}
           </div>
         </>
       )}

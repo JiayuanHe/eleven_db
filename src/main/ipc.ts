@@ -2,7 +2,7 @@ import { ipcMain, dialog } from 'electron';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import { IPC } from '../shared/ipc';
-import type { IpcResult } from '../shared/types';
+import type { IpcResult, QueryResult } from '../shared/types';
 import { connectionManager } from './connection-manager';
 import { connectionStore, historyStore } from './stores/store';
 import { secretStore } from './stores/secrets';
@@ -500,6 +500,85 @@ export function registerIpc(): void {
       // 加 BOM 让 Excel 正确识别 UTF-8
       fs.writeFileSync(result.filePath, '﻿' + args.csv, 'utf-8');
       return ok(result.filePath);
+    } catch (e) {
+      return fail(e);
+    }
+  });
+
+  ipcMain.handle(IPC.export.sql, async (_e, args: {
+    defaultName: string;
+    sql: string;
+  }) => {
+    try {
+      const result = await dialog.showSaveDialog({
+        title: '导出 SQL',
+        defaultPath: args.defaultName,
+        filters: [{ name: 'SQL', extensions: ['sql'] }],
+      });
+      if (result.canceled || !result.filePath) return ok(false);
+      fs.writeFileSync(result.filePath, args.sql, 'utf-8');
+      return ok(result.filePath);
+    } catch (e) {
+      return fail(e);
+    }
+  });
+
+  ipcMain.handle(IPC.import.pickFile, async (_e, ext: 'csv' | 'sql') => {
+    try {
+      const filters =
+        ext === 'sql'
+          ? [{ name: 'SQL', extensions: ['sql'] }]
+          : [{ name: 'CSV', extensions: ['csv'] }];
+      const result = await dialog.showOpenDialog({
+        title: ext === 'sql' ? '选择 SQL 文件' : '选择 CSV 文件',
+        properties: ['openFile'],
+        filters,
+      });
+      if (result.canceled || result.filePaths.length === 0) return ok(false);
+      return ok(result.filePaths[0]);
+    } catch (e) {
+      return fail(e);
+    }
+  });
+
+  ipcMain.handle(IPC.import.readFile, async (_e, path: string) => {
+    try {
+      const content = fs.readFileSync(path, 'utf-8');
+      return ok(content);
+    } catch (e) {
+      return fail(e);
+    }
+  });
+
+  ipcMain.handle(IPC.dump.database, async (_e, args: { id: string; password?: string; database: string }) => {
+    try {
+      const driver = await connectionManager.open(args.id, args.password);
+      // 调用 driver 的导出数据库方法
+      if (typeof (driver as any).dumpDatabase === 'function') {
+        const sql = await (driver as any).dumpDatabase(args.database);
+        return ok(sql);
+      }
+      // 走通用 execute：拼接 SHOW CREATE + SELECT * FROM ... 不现实，回退到简单 export
+      throw new Error('当前驱动不支持数据库导出');
+    } catch (e) {
+      return fail(e);
+    }
+  });
+
+  ipcMain.handle(IPC.dump.execSql, async (_e, args: { id: string; password?: string; sql: string }) => {
+    const start = Date.now();
+    try {
+      const driver = await connectionManager.open(args.id, args.password);
+      // 按 ; 拆分并依次执行（driver.execute 已支持）
+      const statements = args.sql
+        .split(/;\s*(?:\r?\n|$)/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0 && !/^(--|\/\*)/.test(s));
+      let last: QueryResult = { columns: [], rows: [], elapsedMs: 0 };
+      for (const stmt of statements) {
+        last = await driver.execute(stmt);
+      }
+      return ok({ executed: statements.length, last, elapsedMs: Date.now() - start });
     } catch (e) {
       return fail(e);
     }

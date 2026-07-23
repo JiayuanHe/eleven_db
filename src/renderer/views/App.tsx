@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { ConnectionConfig, SchemaObject } from '../../shared/types';
+import type { ConnectionConfig, QueryResult, SchemaObject } from '../../shared/types';
 import { ConnectionTree, ConnectionStatus } from '../components/ConnectionTree';
 import { ConnectionEditor } from '../components/ConnectionEditor';
 import { SchemaTree } from '../components/SchemaTree';
@@ -79,6 +79,121 @@ export function App(): JSX.Element {
       { id, kind: 'redis', redisDb, redisKey, title: `db${redisDb}:${redisKey}` },
     ]);
     setActiveTabId(id);
+  };
+  /**
+   * 导出表为 CSV：通过表浏览器内部的工具函数
+   * 这里复用 table.data 全量拉取 + CSV 序列化 + 保存对话框
+   */
+  const exportTableCsv = async (database: string, table: string) => {
+    if (!conn) return;
+    try {
+      const r = await call<QueryResult>(
+        window.api.table.exportAll({
+          id: conn.id,
+          database,
+          table,
+        }),
+      );
+      const headers = r.columns.map((c: { name: string }) => c.name);
+      const { toCsv } = await import('../lib/csv');
+      const csv = toCsv(headers, r.rows);
+      const file = await call<string | false>(window.api.exportCsv(`${table}.csv`, csv));
+      if (file) toast.push(`已导出 ${r.rows.length.toLocaleString()} 行至 ${file}`, 'success');
+    } catch (e) {
+      toast.push((e as Error).message, 'error');
+    }
+  };
+  /**
+   * 导入 CSV 到表：弹出文件选择 → 解析 → 生成 INSERT
+   */
+  const importTableCsv = async (database: string, table: string) => {
+    if (!conn) return;
+    const path = await call<string | false>(window.api.pickFile('csv'));
+    if (!path) return;
+    try {
+      const raw = await call<string>(window.api.readFile(path));
+      // 去掉 BOM
+      const text = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
+      const { parseCsv } = await import('../lib/csv');
+      const parsed = parseCsv(text);
+      if (parsed.rows.length === 0) {
+        toast.push('CSV 为空', 'info');
+        return;
+      }
+      const cols = parsed.headers.map((c) => `\`${c}\``).join(', ');
+      const batchSize = 100;
+      const totalBatches = Math.ceil(parsed.rows.length / batchSize);
+      const confirmed = window.confirm(
+        `即将向 ${database}.${table} 插入 ${parsed.rows.length.toLocaleString()} 行 (${totalBatches} 个批次)。\n确定吗？`,
+      );
+      if (!confirmed) return;
+      let inserted = 0;
+      for (let i = 0; i < parsed.rows.length; i += batchSize) {
+        const batch = parsed.rows.slice(i, i + batchSize);
+        const valuesSql = batch
+          .map((row) => {
+            const vals = parsed.headers
+              .map((_, j) => {
+                const v = row[j];
+                if (v === '' || v === undefined || v === null) return 'NULL';
+                const numTrim = v.trim();
+                if (/^-?\d+(\.\d+)?$/.test(numTrim)) return numTrim;
+                return `'${String(v).replace(/'/g, "''").replace(/\\/g, '\\\\')}'`;
+              })
+              .join(', ');
+            return `(${vals})`;
+          })
+          .join(', ');
+        const sql = `INSERT INTO \`${database}\`.\`${table}\` (${cols}) VALUES ${valuesSql};`;
+        await call<QueryResult>(window.api.sql.execute(conn.id, sql));
+        inserted += batch.length;
+      }
+      toast.push(`已导入 ${inserted.toLocaleString()} 行到 ${database}.${table}`, 'success');
+    } catch (e) {
+      toast.push((e as Error).message, 'error');
+    }
+  };
+  /**
+   * 导出整个数据库为 SQL 转储
+   */
+  const exportDatabase = async (database: string) => {
+    if (!conn) return;
+    const confirmed = window.confirm(
+      `即将导出数据库 ${database} 为 SQL 转储文件。\n如果库很大可能需要一些时间。\n确定吗？`,
+    );
+    if (!confirmed) return;
+    try {
+      const sql = await call<string>(
+        window.api.dumpDatabase({ id: conn.id, database }),
+      );
+      const file = await call<string | false>(
+        window.api.exportSql(`${database}_dump.sql`, sql),
+      );
+      if (file) toast.push(`已导出 ${database} 到 ${file}`, 'success');
+    } catch (e) {
+      toast.push((e as Error).message, 'error');
+    }
+  };
+  /**
+   * 导入 SQL 文件到数据库
+   */
+  const importDatabase = async (database: string) => {
+    if (!conn) return;
+    const path = await call<string | false>(window.api.pickFile('sql'));
+    if (!path) return;
+    const confirmed = window.confirm(
+      `即将执行 SQL 文件中的语句到 ${database}。\n⚠ 高危操作：可能修改/删除大量数据。\n确定吗？`,
+    );
+    if (!confirmed) return;
+    try {
+      const sql = await call<string>(window.api.readFile(path));
+      const result = await call<{ executed: number }>(
+        window.api.execSql({ id: conn.id, sql }),
+      );
+      toast.push(`已执行 ${result.executed} 条语句到 ${database}`, 'success');
+    } catch (e) {
+      toast.push((e as Error).message, 'error');
+    }
   };
   const newSqlTab = (initialSql?: string) => {
     const id = String(Date.now());
@@ -208,6 +323,10 @@ export function App(): JSX.Element {
                 onSelectTable={openTableTab}
                 onInsertSqlTemplate={(sql) => newSqlTab(sql)}
                 onShowTableDetail={(db, table, mode) => openTableDetail(db, table, mode)}
+                onExportTable={exportTableCsv}
+                onImportTable={importTableCsv}
+                onExportDatabase={exportDatabase}
+                onImportDatabase={importDatabase}
               />
             ) : conn.kind === 'redis' ? (
               <SchemaTree

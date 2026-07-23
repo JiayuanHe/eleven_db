@@ -288,7 +288,6 @@ export function TableBrowser(props: Props): JSX.Element {
       value: m[3] ?? '',
     };
   };
-  const addRow = () => setRowGroups((rs) => [...rs, [{ column: '', op: '=', value: '' }]]);
   const removeRow = (rowIdx: number) =>
     setRowGroups((rs) => rs.filter((_, i) => i !== rowIdx));
   const addItemToRow = (rowIdx: number) =>
@@ -408,9 +407,6 @@ export function TableBrowser(props: Props): JSX.Element {
             <div className="cond-body">
               {rowGroups.map((row, rowIdx) => (
                 <div key={rowIdx} className="cond-row">
-                  {row.length > 1 && rowIdx === 0 && (
-                    <span className="row-connector" title="同一行内用 AND 连接">AND</span>
-                  )}
                   {row.map((cl, itemIdx) => (
                     <span key={itemIdx} className="cond-item">
                       <select
@@ -500,15 +496,6 @@ export function TableBrowser(props: Props): JSX.Element {
                       )}
                     </span>
                   ))}
-                  {rowIdx === rowGroups.length - 1 && (
-                    <button
-                      className="ghost small row-add-new"
-                      title="新起一行"
-                      onClick={addRow}
-                    >
-                      + 新行
-                    </button>
-                  )}
                   {rowGroups.length > 1 && (
                     <button
                       className="ghost small row-del"
