@@ -53,7 +53,7 @@
       "artifactName": "${productName}-${version}-portable.${ext}"
     },
     "linux": {
-      "target": ["AppImage"],
+      "target": ["dir"],
       "icon": ["resources/icon.png"],
       "artifactName": "${productName}-${version}.${ext}"
     }

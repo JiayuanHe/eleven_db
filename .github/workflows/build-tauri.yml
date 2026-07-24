@@ -37,15 +37,21 @@ jobs:
       - name: Build main process
         run: npm run build:main
 
-      - name: Build Linux AppImage
-        run: npx electron-builder --linux AppImage --x64
+      - name: Build Linux (dir)
+        run: npx electron-builder --linux dir --x64
+
+      - name: Create tar archive
+        run: |
+          cd release/linux-unpacked
+          tar -czf ../eleven-db.tar.gz *
+          cd ..
+          ls -lh *.tar.gz
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-appimage
-          path: |
-            release/*.AppImage
+          name: linux-tarball
+          path: release/*.tar.gz
 
   create-release:
     needs: build
@@ -62,7 +68,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: release/*.AppImage
+          files: release/*.tar.gz
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
