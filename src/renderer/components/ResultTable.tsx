@@ -167,7 +167,17 @@ export function ResultTable(props: Props): JSX.Element {
     localInsertEdit?.rowIndex === rowIndex && localInsertEdit?.column === column;
 
   // ---------- 列宽拖动 ----------
-  const dragStateRef = useRef<{ colName: string; startX: number; startW: number } | null>(null);
+  // 拖动时直接操作 <col> 元素的 style.width，不触发 React re-render；
+  // dragStateRef.current 保存中间状态，mouseup 时才同步到 React state。
+  // 用 ref 映射列名 → <col> 元素 + <th> 元素。
+  const colRefs = useRef<Map<string, HTMLTableColElement>>(new Map());
+  const thRefs = useRef<Map<string, HTMLTableCellElement>>(new Map());
+  const dragStateRef = useRef<{
+    colName: string;
+    startX: number;
+    startW: number;
+  } | null>(null);
+
   const startColDrag = (colName: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -182,10 +192,23 @@ export function ResultTable(props: Props): JSX.Element {
       if (!s) return;
       const dx = e.clientX - s.startX;
       const newW = Math.max(MIN_COL_WIDTH, Math.min(MAX_COL_WIDTH, s.startW + dx));
-      setColWidth(s.colName, newW);
+      // 直接修改 DOM 元素，避免 re-render 跳动
+      const colEl = colRefs.current.get(s.colName);
+      const thEl = thRefs.current.get(s.colName);
+      if (colEl) colEl.style.width = `${newW}px`;
+      if (thEl) thEl.style.width = `${newW}px`;
     };
-    const onUp = () => {
-      if (!dragStateRef.current) return;
+    const onUp = (e: MouseEvent) => {
+      const s = dragStateRef.current;
+      if (!s) {
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        return;
+      }
+      // 同步最终宽度到 React state
+      const dx = e.clientX - s.startX;
+      const newW = Math.max(MIN_COL_WIDTH, Math.min(MAX_COL_WIDTH, s.startW + dx));
+      setColWidth(s.colName, newW);
       dragStateRef.current = null;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
@@ -256,7 +279,14 @@ export function ResultTable(props: Props): JSX.Element {
         <table>
           <colgroup>
             {visibleCols.map((c) => (
-              <col key={c.name} style={{ width: getColWidth(c) }} />
+              <col
+                key={c.name}
+                ref={(el) => {
+                  if (el) colRefs.current.set(c.name, el);
+                  else colRefs.current.delete(c.name);
+                }}
+                style={{ width: getColWidth(c) }}
+              />
             ))}
           </colgroup>
           <thead>
@@ -274,6 +304,10 @@ export function ResultTable(props: Props): JSX.Element {
                 return (
                   <th
                     key={c.name}
+                    ref={(el) => {
+                      if (el) thRefs.current.set(c.name, el);
+                      else thRefs.current.delete(c.name);
+                    }}
                     className={cls}
                     style={{ width: getColWidth(c) }}
                     onClick={sortable ? () => cycleSort(c.name) : undefined}

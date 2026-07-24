@@ -247,7 +247,7 @@ export function App(): JSX.Element {
         <span className="logo">Eleven DB</span>
         <span className="conn-name">
           {conn
-            ? `${conn.name} · ${conn.host}:${conn.port} · ${conn.kind.toUpperCase()}`
+            ? `${conn.name} · ${conn.kind.toUpperCase()}`
             : '未选择连接'}
         </span>
         <span className="spacer" />
@@ -397,7 +397,6 @@ export function App(): JSX.Element {
 
       <footer className="statusbar">
         <span>{status}</span>
-        <span className="muted">V1 · MySQL + Redis</span>
       </footer>
 
       {ctx && (
