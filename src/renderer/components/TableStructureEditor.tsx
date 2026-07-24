@@ -421,12 +421,20 @@ export function TableStructureEditor(props: Props): JSX.Element {
                   />
                 </td>
                 <td>
-                  <input
-                    type="checkbox"
-                    checked={r.state.isPrimary}
-                    onChange={(e) => updateRow(r.key, { isPrimary: e.target.checked })}
+                  <button
+                    className={`pk-toggle ${r.state.isPrimary ? 'active' : ''}`}
+                    onClick={() => updateRow(r.key, { isPrimary: !r.state.isPrimary })}
                     disabled={r.state._deleted}
-                  />
+                    title={r.state.isPrimary ? '取消主键' : '设为主键'}
+                    type="button"
+                  >
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="8" cy="15" r="3.5" />
+                      <path d="M10.8 12.2 21 2" />
+                      <path d="m17 6 3 3" />
+                      <path d="m15 8 3 3" />
+                    </svg>
+                  </button>
                 </td>
                 <td>
                   <DefaultValueCell row={r} updateRow={updateRow} />
@@ -441,11 +449,12 @@ export function TableStructureEditor(props: Props): JSX.Element {
                 </td>
                 <td>
                   <button
-                    className={`ghost small ${r.state._deleted ? 'danger-ghost' : ''}`}
+                    className={`row-del-btn ${r.state._deleted ? 'undo' : ''}`}
                     onClick={() => toggleDelete(r.key)}
-                    title={r.state._deleted ? '撤销删除' : '标记为删除'}
+                    title={r.state._deleted ? '撤销删除' : '删除'}
+                    type="button"
                   >
-                    {r.state._deleted ? '↺ 撤销' : '× 删除'}
+                    {r.state._deleted ? '↺' : '×'}
                   </button>
                 </td>
               </tr>

@@ -1949,6 +1949,69 @@ table.tse-grid tr.tse-row-deleted td {
   opacity: 0.5;
   text-decoration: line-through;
 }
+
+/* 主键切换按钮（钥匙图标） */
+.pk-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.pk-toggle:hover:not(:disabled) {
+  background: var(--bg-2);
+  border-color: var(--line);
+  color: var(--accent);
+}
+.pk-toggle.active {
+  background: var(--pk-soft);
+  color: var(--pk);
+  border-color: var(--pk);
+  box-shadow: 0 0 0 2px rgba(180, 83, 9, 0.12);
+}
+.pk-toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 删除行按钮（× / ↺） */
+.row-del-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.row-del-btn:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.row-del-btn.undo {
+  color: var(--success);
+}
+.row-del-btn.undo:hover {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: var(--success);
+}
+
 .tse-default {
   display: flex;
   flex-direction: column;
