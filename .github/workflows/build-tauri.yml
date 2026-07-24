@@ -1,8 +1,8 @@
-name: Build Tauri App
+name: Build Release
 
 on:
   push:
-    branches: [main, rust]
+    branches: [main]
     tags:
       - 'v*'
   pull_request:
@@ -10,76 +10,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-tauri:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: 'macos-latest'
-            args: '--target x86_64-apple-darwin'
-          - platform: 'macos-latest'
-            args: '--target aarch64-apple-darwin'
-          - platform: 'ubuntu-22.04'
-            args: ''
-          - platform: 'windows-latest'
-            args: ''
-
-    runs-on: ${{ matrix.platform }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install Rust stable
-        uses: dtolnay/rust-action@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && matrix.args }}
-          components: rustfmt, clippy
-
-      - name: Install dependencies (Ubuntu)
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev \
-                                 libappindicator3-dev \
-                                 librsvg2-dev \
-                                 patchelf \
-                                 libgtk-3-dev \
-                                 libssl-dev \
-                                 pkg-config \
-                                 build-essential
-
-      - name: Install npm dependencies
-        run: npm ci
-
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: ${{ matrix.args }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: bundles-${{ matrix.platform }}
-          path: |
-            src-tauri/target/*/release/bundle/*
-            src-tauri/target/release/bundle/*
-
   build-electron:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: 'ubuntu-latest'
           - platform: 'windows-latest'
+            target: 'win'
+          - platform: 'ubuntu-latest'
+            target: 'linux'
           - platform: 'macos-latest'
+            target: 'mac'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -90,29 +31,46 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Install npm dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Build Electron app
         run: |
-          if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
-            npm run dist:win
-          else
-            npm run build
-          fi
+          npm run build
+          case "${{ matrix.target }}" in
+            win) npx electron-builder --win nsis portable --x64 ;;
+            mac) npx electron-builder --mac ;;
+            linux) npx electron-builder --linux ;;
+          esac
 
-      - name: Upload artifacts
+      - name: Upload artifacts (Windows)
+        if: matrix.platform == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: electron-${{ matrix.platform }}
+          name: electron-windows
           path: |
-            release/
-            dist/
+            release/*.exe
+
+      - name: Upload artifacts (Linux)
+        if: matrix.platform == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-linux
+          path: |
+            release/*.AppImage
+            release/*.deb
+
+      - name: Upload artifacts (macOS)
+        if: matrix.platform == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-mac
+          path: |
+            release/*.dmg
 
   release:
-    needs: [build-tauri, build-electron]
+    needs: build-electron
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -123,10 +81,17 @@ jobs:
         with:
           path: artifacts
 
+      - name: List artifacts
+        run: find artifacts -type f -name "*.exe" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.dmg"
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: artifacts/**/*.exe
+          files: |
+            artifacts/**/*.exe
+            artifacts/**/*.AppImage
+            artifacts/**/*.deb
+            artifacts/**/*.dmg
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
