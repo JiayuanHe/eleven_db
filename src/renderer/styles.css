@@ -649,10 +649,73 @@ input:hover, select:hover { border-color: var(--line-strong); }
 
 /* ===== Result table ===== */
 .result-table { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
+.result-table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+  flex-shrink: 0;
+}
+.rt-search {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  max-width: 360px;
+}
+.rt-search input {
+  flex: 1;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+.rt-search button {
+  padding: 0 8px;
+  font-size: 14px;
+}
+.rt-count { white-space: nowrap; }
+.rt-col-menu-wrap { position: relative; margin-left: auto; }
+.rt-col-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 6px;
+  min-width: 180px;
+  max-height: 320px;
+  overflow: auto;
+}
+.rt-col-menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 6px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+.rt-col-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  font-size: 12px;
+  transition: background var(--t-fast);
+}
+.rt-col-item:hover { background: var(--bg-2); }
+.rt-col-item input[type='checkbox'] { margin: 0; }
+
 .result-scroll { overflow: auto; flex: 1; min-width: 0; }
 .result-table table {
   min-width: 100%; border-collapse: collapse; font-size: 12px;
   font-family: var(--font-mono);
+  table-layout: fixed;
 }
 .result-table th, .result-table td {
   padding: 7px 12px;
@@ -723,6 +786,50 @@ input:hover, select:hover { border-color: var(--line-strong); }
 }
 .result-table th.pk .sort-ind .arrow.active {
   color: var(--pk);
+}
+
+/* 列宽拖动手柄：列头右边的 6px 透明区域 */
+.result-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-2);
+  font-weight: 600;
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 2px solid var(--line-strong);
+  transition: background var(--t-fast), color var(--t-fast);
+  position: relative;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.result-table th .col-resize {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 2;
+}
+.result-table th .col-resize:hover {
+  background: var(--accent);
+  opacity: 0.4;
+}
+
+/* 单个 cell 被编辑（行级 row-edited 已经有背景，但 cell 单独标更醒目） */
+.result-table td.cell-dirty {
+  background: var(--warn-soft);
+}
+.result-table tr.row-edited td {
+  background: var(--warn-soft);
+}
+.result-table tr.row-edited.selected td,
+.result-table tr.row-edited td.cell-dirty {
+  background: var(--warn-soft) !important;
 }
 .result-table tbody tr { transition: background var(--t-fast); }
 .result-table tbody tr:hover td { background: var(--bg-2); }
