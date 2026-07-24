@@ -19,8 +19,6 @@ jobs:
             target: 'win'
           - platform: 'ubuntu-latest'
             target: 'linux'
-          - platform: 'macos-latest'
-            target: 'mac'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -33,16 +31,16 @@ jobs:
           node-version: '20'
 
       - name: Install npm dependencies
-        run: npm ci --ignore-scripts
+        run: npm install
 
       - name: Build Electron app
         run: |
           npm run build
-          case "${{ matrix.target }}" in
-            win) npx electron-builder --win nsis portable --x64 ;;
-            mac) npx electron-builder --mac ;;
-            linux) npx electron-builder --linux ;;
-          esac
+          if [[ "${{ matrix.target }}" == "win" ]]; then
+            npx electron-builder --win nsis portable --x64
+          elif [[ "${{ matrix.target }}" == "linux" ]]; then
+            npx electron-builder --linux AppImage
+          fi
 
       - name: Upload artifacts (Windows)
         if: matrix.platform == 'windows-latest'
@@ -59,15 +57,6 @@ jobs:
           name: electron-linux
           path: |
             release/*.AppImage
-            release/*.deb
-
-      - name: Upload artifacts (macOS)
-        if: matrix.platform == 'macos-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: electron-mac
-          path: |
-            release/*.dmg
 
   release:
     needs: build-electron
@@ -82,7 +71,7 @@ jobs:
           path: artifacts
 
       - name: List artifacts
-        run: find artifacts -type f -name "*.exe" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.dmg"
+        run: find artifacts -type f \( -name "*.exe" -o -name "*.AppImage" -o -name "*.deb" \)
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -90,8 +79,6 @@ jobs:
           files: |
             artifacts/**/*.exe
             artifacts/**/*.AppImage
-            artifacts/**/*.deb
-            artifacts/**/*.dmg
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
