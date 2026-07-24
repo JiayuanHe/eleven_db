@@ -88,7 +88,6 @@
     "mysql2": "^3.11.0"
   },
   "devDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.62.2",
     "@tauri-apps/cli": "^2.1.0",
     "@types/node": "^22.7.0",
     "@types/react": "^18.3.11",
