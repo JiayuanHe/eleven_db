@@ -8,23 +8,14 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      platform:
-        description: 'Platform to build'
-        required: true
-        default: 'windows'
-        type: choice
-        options:
-          - windows
-          - linux
-          - all
 
 jobs:
-  build-electron:
+  build:
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows-latest, ubuntu-latest]
+        include:
+          - platform: 'ubuntu-latest'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -35,39 +26,29 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build
-        run: npm run build
+      - name: Build renderer
+        run: npm run build:renderer
 
-      - name: Build Windows executable
-        if: matrix.platform == 'windows-latest'
-        run: npx electron-builder --win nsis portable --x64
+      - name: Build main process
+        run: npm run build:main
 
       - name: Build Linux AppImage
-        if: matrix.platform == 'ubuntu-latest'
-        run: npx electron-builder --linux AppImage
-
-      - name: Upload Windows artifacts
-        if: matrix.platform == 'windows-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-exe
-          path: |
-            release/*.exe
-            release/*.blockmap
+        run: npx electron-builder --linux AppImage --x64
 
       - name: Upload Linux artifacts
-        if: matrix.platform == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: linux-appimage
-          path: release/*.AppImage
+          path: |
+            release/*.AppImage
 
   create-release:
-    needs: build-electron
+    needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -78,16 +59,10 @@ jobs:
         with:
           path: release
 
-      - name: List files
-        run: |
-          find release -type f \( -name "*.exe" -o -name "*.AppImage" \) -exec ls -lh {} \;
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            release/**/*.exe
-            release/**/*.AppImage
+          files: release/*.AppImage
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
