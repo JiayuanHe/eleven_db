@@ -37,6 +37,8 @@ type Props =
       onExportDatabase?: (db: string) => void;
       /** 导入 SQL 文件到数据库 */
       onImportDatabase?: (db: string) => void;
+      /** 查看存储过程 / 函数详情（弹出 SHOW CREATE DDL） */
+      onShowRoutineDetail?: (db: string, name: string, kind: 'procedure' | 'function') => void;
     }
   | {
       connection: ConnectionConfig;
@@ -321,71 +323,91 @@ export function SchemaTree(props: Props): JSX.Element {
                         const views = filtered.filter((o) => o.type === 'view');
                         const procs = filtered.filter((o) => o.type === 'procedure');
                         const funcs = filtered.filter((o) => o.type === 'function');
-                        const renderItem = (obj: typeof tables[number]) => (
-                          <div
-                            key={`${db.name}.${obj.name}`}
-                            className="table"
-                            onClick={() => (props as any).onSelectTable(db.name, obj.name)}
-                            onContextMenu={(e) => {
-                              e.preventDefault();
-                              setCtx({ x: e.clientX, y: e.clientY, db: db.name, obj });
-                            }}
-                            title={obj.name}
-                          >
-                            <SchemaIcon
-                              kind={
-                                obj.type === 'view' ? 'view' :
-                                obj.type === 'procedure' ? 'procedure' :
-                                obj.type === 'function' ? 'function' :
-                                'table'
-                              }
-                              className={`icon-${obj.type}`}
-                            />
-                            {obj.name}
-                          </div>
-                        );
+                        const renderItem = (obj: typeof tables[number]) => {
+                          // 点击行为根据类型区分
+                          const isTableLike = obj.type === 'table' || obj.type === 'view';
+                          const handleClick = () => {
+                            if (isTableLike) {
+                              (props as any).onSelectTable(db.name, obj.name);
+                            } else {
+                              // procedure / function → 调用 onShowRoutineDetail
+                              (props as any).onShowRoutineDetail?.(db.name, obj.name, obj.type);
+                            }
+                          };
+                          return (
+                            <div
+                              key={`${db.name}.${obj.name}`}
+                              className="table"
+                              onClick={handleClick}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                setCtx({ x: e.clientX, y: e.clientY, db: db.name, obj });
+                              }}
+                              title={obj.name}
+                            >
+                              <SchemaIcon
+                                kind={
+                                  obj.type === 'view' ? 'view' :
+                                  obj.type === 'procedure' ? 'procedure' :
+                                  obj.type === 'function' ? 'function' :
+                                  'table'
+                                }
+                                className={`icon-${obj.type}`}
+                              />
+                              {obj.name}
+                            </div>
+                          );
+                        };
                         return (
                           <>
-                            {tables.length > 0 && (
-                              <GroupFolder
-                                kind="table"
-                                title="表"
-                                count={tables.length}
-                                defaultOpen
-                              >
-                                {tables.map(renderItem)}
-                              </GroupFolder>
-                            )}
-                            {views.length > 0 && (
-                              <GroupFolder
-                                kind="view"
-                                title="视图"
-                                count={views.length}
-                                defaultOpen={false}
-                              >
-                                {views.map(renderItem)}
-                              </GroupFolder>
-                            )}
-                            {procs.length > 0 && (
-                              <GroupFolder
-                                kind="procedure"
-                                title="存储过程"
-                                count={procs.length}
-                                defaultOpen={false}
-                              >
-                                {procs.map(renderItem)}
-                              </GroupFolder>
-                            )}
-                            {funcs.length > 0 && (
-                              <GroupFolder
-                                kind="function"
-                                title="函数"
-                                count={funcs.length}
-                                defaultOpen={false}
-                              >
-                                {funcs.map(renderItem)}
-                              </GroupFolder>
-                            )}
+                            <GroupFolder
+                              kind="table"
+                              title="表"
+                              count={tables.length}
+                              defaultOpen
+                            >
+                              {tables.length === 0 ? (
+                                <div className="schema-empty small">（无）</div>
+                              ) : (
+                                tables.map(renderItem)
+                              )}
+                            </GroupFolder>
+                            <GroupFolder
+                              kind="view"
+                              title="视图"
+                              count={views.length}
+                              defaultOpen={false}
+                            >
+                              {views.length === 0 ? (
+                                <div className="schema-empty small">（无）</div>
+                              ) : (
+                                views.map(renderItem)
+                              )}
+                            </GroupFolder>
+                            <GroupFolder
+                              kind="procedure"
+                              title="存储过程"
+                              count={procs.length}
+                              defaultOpen={false}
+                            >
+                              {procs.length === 0 ? (
+                                <div className="schema-empty small">（无）</div>
+                              ) : (
+                                procs.map(renderItem)
+                              )}
+                            </GroupFolder>
+                            <GroupFolder
+                              kind="function"
+                              title="函数"
+                              count={funcs.length}
+                              defaultOpen={false}
+                            >
+                              {funcs.length === 0 ? (
+                                <div className="schema-empty small">（无）</div>
+                              ) : (
+                                funcs.map(renderItem)
+                              )}
+                            </GroupFolder>
                           </>
                         );
                       })()}

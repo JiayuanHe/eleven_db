@@ -8,6 +8,7 @@ import { SqlConsole } from './SqlConsole';
 import { TableBrowser } from './TableBrowser';
 import { RedisBrowser } from './RedisBrowser';
 import { TableDetailModal } from '../components/TableDetailModal';
+import { RoutineDetailModal } from '../components/RoutineDetailModal';
 import { SplashScreen } from '../components/SplashScreen';
 import { toast, call } from '../lib/api';
 import { useTheme } from '../lib/theme';
@@ -47,6 +48,10 @@ export function App(): JSX.Element {
   /** 表详情弹窗（查看/编辑结构） */
   const [detailTarget, setDetailTarget] = useState<
     { db: string; table: string; mode: 'view' | 'edit' } | null
+  >(null);
+  /** 存储过程/函数详情弹窗 */
+  const [routineTarget, setRoutineTarget] = useState<
+    { db: string; name: string; kind: 'procedure' | 'function' } | null
   >(null);
   const [status, setStatus] = useState<string>('就绪');
   const [theme, , setTheme] = useTheme();
@@ -204,6 +209,9 @@ export function App(): JSX.Element {
   const openTableDetail = (db: string, table: string, mode: 'view' | 'edit' = 'view') => {
     setDetailTarget({ db, table, mode });
   };
+  const openRoutineDetail = (db: string, name: string, kind: 'procedure' | 'function') => {
+    setRoutineTarget({ db, name, kind });
+  };
   
 
   const closeTab = (id: string) => {
@@ -323,6 +331,7 @@ export function App(): JSX.Element {
                 onSelectTable={openTableTab}
                 onInsertSqlTemplate={(sql) => newSqlTab(sql)}
                 onShowTableDetail={(db, table, mode) => openTableDetail(db, table, mode)}
+                onShowRoutineDetail={(db, name, kind) => openRoutineDetail(db, name, kind)}
                 onExportTable={exportTableCsv}
                 onImportTable={importTableCsv}
                 onExportDatabase={exportDatabase}
@@ -460,6 +469,17 @@ export function App(): JSX.Element {
             // 表结构可能变，刷新一下 schema 树
             setRefreshKey((k) => k + 1);
           }}
+        />
+      )}
+
+      {routineTarget && conn && (
+        <RoutineDetailModal
+          key={`${routineTarget.db}.${routineTarget.name}.${routineTarget.kind}`}
+          conn={conn}
+          database={routineTarget.db}
+          name={routineTarget.name}
+          kind={routineTarget.kind}
+          onClose={() => setRoutineTarget(null)}
         />
       )}
 
