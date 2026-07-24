@@ -1802,56 +1802,74 @@ input[type='radio'] {
 }
 
 /* ===== Review Dialog（SQL 预览确认） ===== */
+.rev-summary {
+  display: flex;
+  gap: 8px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-1);
+}
 .rev-chip {
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
+  padding: 4px 14px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
+  border: 1px solid;
 }
-.rev-row {
-  cursor: pointer;
+.rev-body {
+  padding: 0;
+}
+.rev-item {
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid;
+  background: var(--bg-1);
   transition: background var(--t-fast);
 }
-.rev-row:hover { background: var(--bg-2); }
-.rev-row-head {
+.rev-item:hover { background: var(--bg-2); }
+.rev-item.rev-insert {
+  background: linear-gradient(90deg, var(--success-soft) 0%, var(--bg-1) 30%);
+}
+.rev-item.rev-update {
+  background: linear-gradient(90deg, var(--accent-soft) 0%, var(--bg-1) 30%);
+}
+.rev-item.rev-delete {
+  background: linear-gradient(90deg, var(--danger-soft) 0%, var(--bg-1) 30%);
+}
+.rev-item-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 18px;
+  margin-bottom: 6px;
 }
 .rev-tag {
   display: inline-block;
-  padding: 2px 10px;
+  padding: 2px 12px;
   border-radius: var(--radius-xs);
   font-size: 11px;
   font-weight: 600;
   flex-shrink: 0;
   min-width: 40px;
   text-align: center;
+  border: 1px solid;
 }
-.rev-sql-preview {
-  flex: 1;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.rev-toggle {
-  flex-shrink: 0;
-  font-size: 14px;
-}
-.rev-sql-detail {
+.rev-sql {
   margin: 0;
-  padding: 8px 18px 14px 60px;
+  padding: 8px 10px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text);
-  background: var(--bg-2);
   white-space: pre-wrap;
   word-break: break-all;
-  border-top: 1px dashed var(--line);
+  line-height: 1.55;
+}
+.rev-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }

@@ -175,17 +175,37 @@ export function TableBrowser(props: Props): JSX.Element {
   };
 
   // ---------- 选中 ----------
+  // selected 累积语义：一旦勾选就作为“待删除”标记，保留到 reload。
+  // 这样用户取消勾选 checkbox 不会撤销删除意图。
+  // checkbox 状态与 selected 完全同步（被勾选 → 一直勾选）。
   const onSelectRow = (rowIndex: number, sel: boolean) => {
+    if (!sel) return; // 取消勾选不删除标记
     setSelected((prev) => {
       const next = new Set(prev);
-      if (sel) next.add(rowIndex); else next.delete(rowIndex);
+      next.add(rowIndex);
       return next;
     });
   };
   const onSelectAll = (sel: boolean) => {
     if (!result) return;
-    if (sel) setSelected(new Set(result.rows.map((_, i) => i)));
-    else setSelected(new Set());
+    if (sel) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        for (let i = 0; i < result.rows.length; i++) next.add(i);
+        return next;
+      });
+    }
+    // 取消全选也不撤销删除意图
+  };
+  /**
+   * 显式撤销一个“待删除”标记（用于在 reload 之前撤销某个删除意图）
+   */
+  const unmarkDelete = (rowIndex: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(rowIndex);
+      return next;
+    });
   };
 
   // ---------- 提交 ----------
@@ -329,13 +349,7 @@ export function TableBrowser(props: Props): JSX.Element {
   };
 
   const onDeleteSelected = () => {
-    if (selected.size === 0) return;
-    if (pks.length === 0) {
-      toast.push('该表无主键，无法安全生成 DELETE', 'error');
-      return;
-    }
-    // 选中行已收集在 selected 中，提交时会变 op:'delete'
-    toast.push(`已标记 ${selected.size} 行待删除，点提交写入数据库`, 'info');
+    // 保留为兼容。 selected 现在是累积语义，不需要额外点击标记。
   };
 
   // ---------- 条件区 handler ----------
@@ -393,12 +407,12 @@ export function TableBrowser(props: Props): JSX.Element {
         </button>
         <button onClick={() => reload(composedWhere)}>刷新</button>
         <button
-          onClick={onDeleteSelected}
+          onClick={() => setSelected(new Set())}
           disabled={selected.size === 0}
           className="danger-ghost"
-          title="删除选中的行"
+          title="清空所有待删除标记（刷新也会清空）"
         >
-          删除 ({selected.size})
+          清除删除 ({selected.size})
         </button>
         <div className="export-wrap" style={{ position: 'relative' }}>
           <button onClick={(e) => { e.stopPropagation(); setShowExportMenu((v) => !v); }}>导出 ▾</button>

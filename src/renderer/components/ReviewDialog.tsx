@@ -1,9 +1,9 @@
-import { useState } from 'react';
-
 /**
  * SQL 预览 / 确认对话框
  * 提交 INSERT/UPDATE/DELETE 前显示生成的 SQL 列表
- * 用户点击"确认执行"才会真的发到主进程
+ * - 每行用对应 op 的语义色背景高亮（删除红 / 更新蓝 / 新增绿）
+ * - SQL 始终展开，直接看到完整语句
+ * - 用户点击"确认执行"才会真的发到主进程
  */
 
 export interface ReviewSqlItem {
@@ -20,14 +20,28 @@ interface Props {
   busy?: boolean;
 }
 
-const OP_META: Record<ReviewSqlItem['op'], { label: string; color: string; bg: string }> = {
-  INSERT: { label: '新增', color: 'var(--success)', bg: 'var(--success-soft)' },
-  UPDATE: { label: '更新', color: 'var(--accent)', bg: 'var(--accent-soft)' },
-  DELETE: { label: '删除', color: 'var(--danger)', bg: 'var(--danger-soft)' },
+const OP_META: Record<ReviewSqlItem['op'], { label: string; color: string; bg: string; border: string }> = {
+  INSERT: {
+    label: '新增',
+    color: 'var(--success)',
+    bg: 'var(--success-soft)',
+    border: 'rgba(5, 150, 105, 0.4)',
+  },
+  UPDATE: {
+    label: '更新',
+    color: 'var(--accent)',
+    bg: 'var(--accent-soft)',
+    border: 'rgba(37, 99, 235, 0.4)',
+  },
+  DELETE: {
+    label: '删除',
+    color: 'var(--danger)',
+    bg: 'var(--danger-soft)',
+    border: 'rgba(220, 38, 38, 0.4)',
+  },
 };
 
 export function ReviewDialog(props: Props): JSX.Element {
-  const [expanded, setExpanded] = useState<{ [i: number]: boolean }>({});
   const counts: Record<ReviewSqlItem['op'], number> = {
     INSERT: 0,
     UPDATE: 0,
@@ -54,58 +68,57 @@ export function ReviewDialog(props: Props): JSX.Element {
         </div>
 
         {/* 顶部汇总 chip */}
-        <div style={{ display: 'flex', gap: 8, padding: '10px 18px', borderBottom: '1px solid var(--line)' }}>
+        <div className="rev-summary">
           {counts.UPDATE > 0 && (
-            <span className="rev-chip" style={{ background: OP_META.UPDATE.bg, color: OP_META.UPDATE.color }}>
+            <span
+              className="rev-chip"
+              style={{ background: OP_META.UPDATE.bg, color: OP_META.UPDATE.color, borderColor: OP_META.UPDATE.border }}
+            >
               更新 {counts.UPDATE}
             </span>
           )}
           {counts.INSERT > 0 && (
-            <span className="rev-chip" style={{ background: OP_META.INSERT.bg, color: OP_META.INSERT.color }}>
+            <span
+              className="rev-chip"
+              style={{ background: OP_META.INSERT.bg, color: OP_META.INSERT.color, borderColor: OP_META.INSERT.border }}
+            >
               新增 {counts.INSERT}
             </span>
           )}
           {counts.DELETE > 0 && (
-            <span className="rev-chip" style={{ background: OP_META.DELETE.bg, color: OP_META.DELETE.color }}>
+            <span
+              className="rev-chip"
+              style={{ background: OP_META.DELETE.bg, color: OP_META.DELETE.color, borderColor: OP_META.DELETE.border }}
+            >
               删除 {counts.DELETE}
             </span>
           )}
-          <span style={{ flex: 1 }} />
-          <span className="muted small">点击行展开 / 收起详情</span>
         </div>
 
-        <div className="modal-body" style={{ padding: 0 }}>
+        <div className="modal-body rev-body">
           {props.items.map((it, i) => {
             const meta = OP_META[it.op];
-            const isOpen = expanded[i] ?? false;
             return (
               <div
                 key={i}
-                className="rev-row"
-                onClick={() => setExpanded((p) => ({ ...p, [i]: !isOpen }))}
-                style={{ borderBottom: '1px solid var(--line)' }}
+                className={`rev-item rev-${it.op.toLowerCase()}`}
+                style={{ borderLeftColor: meta.color }}
               >
-                <div className="rev-row-head">
+                <div className="rev-item-head">
                   <span
                     className="rev-tag"
-                    style={{ background: meta.bg, color: meta.color }}
+                    style={{ background: meta.bg, color: meta.color, borderColor: meta.border }}
                   >
                     {meta.label}
                   </span>
-                  <span className="rev-sql-preview">
-                    {it.sql.split('\n')[0]}
-                  </span>
-                  <span className="muted small rev-toggle">{isOpen ? '▾' : '▸'}</span>
                 </div>
-                {isOpen && (
-                  <pre className="rev-sql-detail">{it.sql}</pre>
-                )}
+                <pre className="rev-sql">{it.sql}</pre>
               </div>
             );
           })}
         </div>
 
-        <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="modal-footer rev-footer">
           <span className="muted small">
             ⚠ 这些操作将立即写入数据库（事务）
           </span>
