@@ -4,6 +4,7 @@ import { call, toast } from '../lib/api';
 import { SchemaIcon } from './SchemaIcon';
 import { groupRedisKeys, makeBreadcrumb, RedisKeyNode } from '../lib/redis-tree';
 import { TableDetailModal } from './TableDetailModal';
+import { ScriptStore, Script } from '../lib/scripts';
 
 /**
  * 中间一列：
@@ -325,7 +326,12 @@ export function SchemaTree(props: Props): JSX.Element {
                         title={obj.name}
                       >
                         <SchemaIcon
-                          kind={obj.type === 'view' ? 'view' : 'table'}
+                          kind={
+                            obj.type === 'view' ? 'view' :
+                            obj.type === 'procedure' ? 'procedure' :
+                            obj.type === 'function' ? 'function' :
+                            'table'
+                          }
                           className={`icon-${obj.type}`}
                         />
                         {obj.name}
@@ -333,6 +339,9 @@ export function SchemaTree(props: Props): JSX.Element {
                     ))
                   )
                 )}
+
+                {/* 脚本区：跨连接共享，从 localStorage 读取 */}
+                {props.kind === 'mysql' && <ScriptFolder onRun={(sql) => props.onInsertSqlTemplate?.(sql)} />}
 
                 {props.kind === 'redis' && (
                   <>
@@ -386,6 +395,32 @@ export function SchemaTree(props: Props): JSX.Element {
                 </button>
                 <button className="ctx-item" onClick={() => { props.onImportDatabase?.(ctx.db); setCtx(null); }}>
                   导入 SQL 文件
+                </button>
+              </>
+            ) : ctx.obj.type === 'procedure' || ctx.obj.type === 'function' ? (
+              // 存储过程 / 函数右键
+              <>
+                <button
+                  className="ctx-item"
+                  onClick={() => {
+                    const ddl = `SHOW CREATE ${ctx.obj.type === 'procedure' ? 'PROCEDURE' : 'FUNCTION'} \`${ctx.db}\`.\`${ctx.obj.name}\`;`;
+                    props.onInsertSqlTemplate?.(ddl);
+                    setCtx(null);
+                  }}
+                >
+                  生成 SHOW CREATE 模板
+                </button>
+                <button
+                  className="ctx-item"
+                  onClick={() => {
+                    const call = ctx.obj.type === 'procedure'
+                      ? `CALL \`${ctx.db}\`.\`${ctx.obj.name}\`();`
+                      : `SELECT \`${ctx.db}\`.\`${ctx.obj.name}\`();`;
+                    props.onInsertSqlTemplate?.(call);
+                    setCtx(null);
+                  }}
+                >
+                  生成调用模板
                 </button>
               </>
             ) : (
@@ -444,4 +479,109 @@ function countAllKeys(nodes: RedisKeyNode[]): number {
     else if (node.children) n += countAllKeys(node.children);
   }
   return n;
+}
+
+/**
+ * 脚本文件夹：渲染在每个数据库下方
+ * 跨连接共享，存储在 localStorage
+ */
+function ScriptFolder(props: { onRun: (sql: string) => void }): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const [scripts, setScripts] = useState<Script[]>(() => ScriptStore.list());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+
+  const refresh = () => setScripts(ScriptStore.list());
+  // 监听 localStorage 变化
+  useEffect(() => ScriptStore.subscribe(refresh), []);
+
+  return (
+    <div className="schema-script-section">
+      <div
+        className="schema-script-header"
+        onClick={() => setOpen((o) => !o)}
+        title="点击展开 / 折叠脚本"
+      >
+        <span className={`caret ${open ? 'open' : ''}`}>▸</span>
+        <SchemaIcon kind="script" className="icon-script" />
+        <span>脚本</span>
+        <span className="badge">{scripts.length}</span>
+        {open && (
+          <button
+            className="ghost xs"
+            style={{ marginLeft: 'auto' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              const name = window.prompt('脚本名称：', '');
+              if (!name) return;
+              ScriptStore.create(name, '');
+              refresh();
+              toast.push('已创建脚本', 'success');
+            }}
+          >
+            + 新建
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="schema-script-list">
+          {scripts.length === 0 ? (
+            <div className="schema-empty small">暂无脚本。点 + 新建 或在 SQL 控制台"保存为脚本"</div>
+          ) : (
+            scripts.map((s) => (
+              <div
+                key={s.id}
+                className="schema-script-row"
+                onClick={() => props.onRun(s.sql)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditingId(s.id);
+                  setEditName(s.name);
+                }}
+                title={s.sql.slice(0, 80)}
+              >
+                <SchemaIcon kind="script" className="icon-script-mini" />
+                {editingId === s.id ? (
+                  <input
+                    autoFocus
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onBlur={() => {
+                      if (editName.trim()) ScriptStore.update(s.id, { name: editName.trim() });
+                      setEditingId(null);
+                      refresh();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+                      if (e.key === 'Escape') setEditingId(null);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span className="name">{s.name}</span>
+                )}
+                {editingId === s.id && (
+                  <button
+                    className="ghost xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`删除脚本 "${s.name}"？`)) {
+                        ScriptStore.remove(s.id);
+                        setEditingId(null);
+                        refresh();
+                        toast.push('已删除', 'success');
+                      }
+                    }}
+                  >
+                    删除
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
 }

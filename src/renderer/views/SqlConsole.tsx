@@ -129,6 +129,24 @@ export function SqlConsole(props: Props): JSX.Element {
           )}
           <button onClick={exportCsv} disabled={!result}>导出 CSV</button>
           <button onClick={() => setSql(formatSql(sql))}>格式化</button>
+          <button
+            onClick={() => {
+              if (!sql.trim()) {
+                toast.push('SQL 为空', 'info');
+                return;
+              }
+              const name = window.prompt('脚本名称：', sql.split('\n')[0].slice(0, 30) || '未命名');
+              if (!name) return;
+              import('../lib/scripts').then(({ ScriptStore }) => {
+                const s = ScriptStore.create(name, sql);
+                toast.push(`已保存脚本：${s.name}`, 'success');
+              });
+            }}
+            disabled={!sql.trim()}
+            title="把当前 SQL 保存为脚本（左侧脚本区可点击调用）"
+          >
+            保存为脚本
+          </button>
         </div>
         {error ? (
           <pre className="error">{error}</pre>

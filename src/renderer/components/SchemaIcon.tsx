@@ -10,7 +10,7 @@
 
 import { CSSProperties } from 'react';
 
-export type IconKind = 'db' | 'table' | 'view' | 'folder' | 'key';
+export type IconKind = 'db' | 'table' | 'view' | 'folder' | 'key' | 'procedure' | 'function' | 'script';
 
 interface Props {
   kind: IconKind;
@@ -65,6 +65,31 @@ export function SchemaIcon({ kind, size = 14, className, style }: Props): JSX.El
           <path d="M10.8 12.2 21 2" />
           <path d="m17 6 3 3" />
           <path d="m15 8 3 3" />
+        </svg>
+      );
+    case 'procedure':
+      // 存储过程：齿轮状的圆 + 突出
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 3v2 M12 19v2 M3 12h2 M19 12h2 M5.6 5.6l1.4 1.4 M17 17l1.4 1.4 M5.6 18.4 7 7 M17 7l1.4-1.4" />
+        </svg>
+      );
+    case 'function':
+      // 函数：f(x) 文字
+      return (
+        <svg {...common}>
+          <path d="M9 22V8h6a4 4 0 0 1 0 8H9" />
+          <path d="M9 14H5" />
+        </svg>
+      );
+    case 'script':
+      // 脚本：文件 + 代码符号
+      return (
+        <svg {...common}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <path d="M14 2v6h6" />
+          <path d="m9 14 2 2-2 2 M13 18h2" />
         </svg>
       );
     case 'table':

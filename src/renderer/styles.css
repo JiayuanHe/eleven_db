@@ -364,7 +364,69 @@ input:hover, select:hover { border-color: var(--line-strong); }
 /* ===== Schema tree ===== */
 .schema-tree { padding: 4px; }
 
-/* ===== Connection tree：隐藏连接区 ===== */
+/* ===== Schema tree：脚本区 ===== */
+.schema-script-section {
+  margin-top: 4px;
+}
+.schema-script-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  transition: background var(--t-fast);
+}
+.schema-script-header:hover { background: var(--bg-2); }
+.schema-script-header .caret { font-size: 10px; color: var(--muted); }
+.schema-script-header .badge {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--bg-2);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.schema-script-list {
+  margin-left: 14px;
+  border-left: 1px solid var(--line);
+  padding-left: 4px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+.schema-script-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-2);
+  transition: background var(--t-fast);
+}
+.schema-script-row:hover { background: var(--bg-2); color: var(--text); }
+.schema-script-row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.schema-script-row input {
+  flex: 1;
+  font-size: 12px;
+  padding: 2px 6px;
+  background: var(--bg-1);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-xs);
+}
+.icon-script { color: var(--accent); }
+.icon-script-mini { color: var(--muted); flex-shrink: 0; width: 12px; height: 12px; }
+.icon-procedure { color: #c084fc; flex-shrink: 0; width: 14px; height: 14px; }
+.icon-function { color: #f59e0b; flex-shrink: 0; width: 14px; height: 14px; }
+}
+.icon-script { color: var(--accent); }
+.icon-script-mini { color: var(--muted); flex-shrink: 0; width: 12px; height: 12px; }
+.icon-procedure { color: #c084fc; flex-shrink: 0; width: 14px; height: 14px; }
+.icon-function { color: #f59e0b; flex-shrink: 0; width: 14px; height: 14px; }
 .tree-hidden-section {
   margin-top: 8px;
   border-top: 1px dashed var(--line);

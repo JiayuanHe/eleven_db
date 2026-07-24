@@ -98,6 +98,20 @@ export class MysqlDriver implements ConnectionDriver {
     );
     for (const r of v) out.push({ name: r.name, type: 'view' });
 
+    // 存储过程 + 函数
+    const [r] = await this.getPool().query<RowDataPacket[]>(
+      `SELECT ROUTINE_NAME AS name, ROUTINE_TYPE AS type
+       FROM information_schema.routines
+       WHERE ROUTINE_SCHEMA = ?
+       ORDER BY ROUTINE_TYPE, ROUTINE_NAME`,
+      [db],
+    );
+    for (const row of r) {
+      const t = String(row.type ?? '').toUpperCase();
+      if (t === 'PROCEDURE') out.push({ name: row.name, type: 'procedure' });
+      else if (t === 'FUNCTION') out.push({ name: row.name, type: 'function' });
+    }
+
     return out;
   }
 
