@@ -320,9 +320,20 @@ export function TableStructureEditor(props: Props): JSX.Element {
           {showPreview ? '隐藏 SQL 预览' : '查看 SQL 预览'}
         </button>
         <span className="spacer" />
-        <span className="muted small">
-          改动：新增 {newRows.length} / 删除 {deletedNames.length} / 修改 {changedRows.length}
-        </span>
+        <div className="stats">
+          {newRows.length > 0 && (
+            <span className="stat-item add">+ 新增 {newRows.length}</span>
+          )}
+          {deletedNames.length > 0 && (
+            <span className="stat-item del">- 删除 {deletedNames.length}</span>
+          )}
+          {changedRows.length > 0 && (
+            <span className="stat-item mod">~ 修改 {changedRows.length}</span>
+          )}
+          {newRows.length === 0 && deletedNames.length === 0 && changedRows.length === 0 && (
+            <span className="muted small">无改动</span>
+          )}
+        </div>
         <button className="ghost small" onClick={props.onClose} disabled={busy}>取消</button>
         <button
           className="primary"
@@ -334,13 +345,19 @@ export function TableStructureEditor(props: Props): JSX.Element {
       </div>
 
       {!valid.ok && (
-        <div className="tse-warn">⚠ {valid.msg}</div>
+        <div className="tse-warn">{valid.msg}</div>
       )}
 
       {showPreview && (
-        <pre className="tse-preview">{previewSql()}</pre>
+        <div className="tse-preview">
+          <div className="tse-preview-toggle" onClick={() => setShowPreview(false)}>
+            <span>▼</span> SQL 预览
+          </div>
+          <pre style={{ margin: 0 }}>{previewSql()}</pre>
+        </div>
       )}
 
+      <div className="tse-body">
       <div className="tse-grid-wrap">
         <table className="tse-grid">
           <thead>
@@ -436,6 +453,7 @@ export function TableStructureEditor(props: Props): JSX.Element {
             })}
           </tbody>
         </table>
+      </div>
       </div>
     </div>
   );
