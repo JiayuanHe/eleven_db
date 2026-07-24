@@ -43,10 +43,12 @@ interface Props {
   changes?: Map<number, CellChange[]>;
   onCellChange?: (rowIndex: number, column: string, newValue: unknown) => void;
   onExportCsv?: () => void;
-  /** 选中行（删除用） */
+  /** 选中行（用于点"删除"按钮前的预选） */
   selected?: Set<number>;
   onSelectRow?: (rowIndex: number, selected: boolean) => void;
   onSelectAll?: (selected: boolean) => void;
+  /** 已标记为待删除的行（累积语义，refresh 后清空） */
+  pendingDelete?: Set<number>;
   /** 新增 / 待插入行（顶部） */
   pendingInserts?: PendingRow[];
   onPendingInsertCell?: (rowIndex: number, column: string, newValue: unknown) => void;
@@ -235,10 +237,18 @@ export function ResultTable(props: Props): JSX.Element {
               const rowChanges = changes?.get(i);
               const dirtyCols = new Set(rowChanges?.map((ch) => ch.column) ?? []);
               const isSelected = selected?.has(i) ?? false;
+              const isPendingDelete = props.pendingDelete?.has(i) ?? false;
+              // 行状态：
+              //   .row-pending-delete > .row-edited（删除优先）
+              const rowCls = [
+                dirtyCols.size > 0 ? 'row-edited' : '',
+                isSelected ? 'selected' : '',
+                isPendingDelete ? 'row-pending-delete' : '',
+              ].filter(Boolean).join(' ');
               return (
                 <tr
                   key={i}
-                  className={`${dirtyCols.size > 0 ? 'dirty' : ''} ${isSelected ? 'selected' : ''}`}
+                  className={rowCls}
                 >
                   <td className="select-col">
                     <input

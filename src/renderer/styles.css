@@ -766,6 +766,28 @@ input:hover, select:hover { border-color: var(--line-strong); }
 .result-table tr.selected:hover td {
   background: var(--bg-3) !important;
 }
+/* 有编辑（changes）的行：橙色背景（写在前面，让 row-pending-delete 覆盖）*/
+.result-table tr.row-edited td {
+  background: var(--warn-soft);
+  box-shadow: inset 2px 0 0 var(--warn);
+}
+.result-table tr.row-edited.selected td {
+  background: var(--warn-soft) !important;
+}
+/* 待删除的行：红色背景 + 整体置灰（即使取消勾选也保留）*/
+.result-table tr.row-pending-delete td {
+  background: var(--danger-soft) !important;
+  box-shadow: inset 3px 0 0 var(--danger);
+  opacity: 0.55;
+  text-decoration: line-through;
+  text-decoration-color: var(--danger);
+}
+.result-table tr.row-pending-delete.selected td {
+  background: var(--danger-soft) !important;
+}
+.result-table tr.row-pending-delete td * {
+  pointer-events: none;  /* 置灰后禁用编辑 */
+}
 .result-table tr.insert-row td { background: var(--success-soft); }
 .result-table tr.insert-row.selected td { background: var(--accent-soft) !important; }
 .result-table .badge-insert {

@@ -219,7 +219,7 @@ export function TableBrowser(props: Props): JSX.Element {
   };
 
   /**
-   * 显式撤销某个待删除标记（用于在 reload 前撤销某个特定删除）
+   * 显式撤销某个待删除标记（保留备用，目前 UI 不暴露）
    */
   const unmarkDelete = (rowIndex: number) => {
     setPendingDelete((prev) => {
@@ -228,11 +228,6 @@ export function TableBrowser(props: Props): JSX.Element {
       return next;
     });
   };
-
-  /**
-   * 清除所有待删除
-   */
-  const clearPendingDelete = () => setPendingDelete(new Set());
 
   // ---------- 提交 ----------
   /**
@@ -430,26 +425,17 @@ export function TableBrowser(props: Props): JSX.Element {
           className="primary"
           title="把所有变更（新增 / 修改 / 删除）一次性写入数据库（事务）"
         >
-          提交 ({pendingCount} 项)
+          提交 ({pendingCount} 行)
         </button>
         <button onClick={() => reload(composedWhere)}>刷新</button>
         <button
           onClick={onMarkDelete}
           disabled={selected.size === 0}
           className="danger-ghost"
-          title="把当前勾选行标记为待删除（即使取消勾选也保留）"
+          title="把当前勾选行标记为待删除（即使取消勾选也保留到刷新）"
         >
           删除 ({selected.size})
         </button>
-        {pendingDelete.size > 0 && (
-          <button
-            onClick={clearPendingDelete}
-            className="danger-ghost"
-            title="清空所有待删除标记"
-          >
-            清除删除 ({pendingDelete.size})
-          </button>
-        )}
         <div className="export-wrap" style={{ position: 'relative' }}>
           <button onClick={(e) => { e.stopPropagation(); setShowExportMenu((v) => !v); }}>导出 ▾</button>
           {showExportMenu && (
@@ -639,6 +625,7 @@ export function TableBrowser(props: Props): JSX.Element {
           onSelectAll={onSelectAll}
           pendingInserts={pendingInserts}
           onPendingInsertCell={onPendingInsertCell}
+          pendingDelete={pendingDelete}
           editing={editing}
         />
       )}
