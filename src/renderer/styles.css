@@ -1841,8 +1841,8 @@ table.tse-grid tbody td {
 table.tse-grid input[type='text'],
 table.tse-grid input:not([type]) {
   width: 100%;
-  background: transparent;
-  border: 1px solid transparent;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
   border-radius: 3px;
   padding: 3px 5px;
   font-size: 12px;
@@ -1852,7 +1852,8 @@ table.tse-grid input[type='text']:focus,
 table.tse-grid input:not([type]):focus {
   outline: none;
   border-color: var(--accent);
-  background: var(--bg-2);
+  background: var(--bg-1);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 table.tse-grid tr.tse-row-dirty td {
   background: rgba(255, 200, 60, 0.08);

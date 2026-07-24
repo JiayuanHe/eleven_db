@@ -268,7 +268,15 @@ export function TableStructureEditor(props: Props): JSX.Element {
   };
 
   const onApply = async () => {
-    if (!valid.ok) return toast.push(valid.msg, 'error');
+    if (!valid.ok) {
+      // 定位到第一个出错的行：找第一个空 name 的新行
+      const firstEmpty = rows.find((r) => !r.state._deleted && !r.state.name.trim());
+      if (firstEmpty) {
+        const el = document.querySelector(`[data-tse-key="${firstEmpty.key}"] input`) as HTMLInputElement | null;
+        el?.focus();
+      }
+      return toast.push(valid.msg, 'error');
+    }
     if (!confirm(`确定要把以下变更应用到 ${props.database}.${props.table} ？\n\n${previewSql()}`)) {
       return;
     }
@@ -347,6 +355,7 @@ export function TableStructureEditor(props: Props): JSX.Element {
             {rows.map((r, i) => (
               <tr
                 key={r.key}
+                data-tse-key={r.key}
                 className={
                   r.state._deleted
                     ? 'tse-row-deleted'
