@@ -51,6 +51,11 @@
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "icon": ["resources/icon.png"],
+      "artifactName": "${productName}-${version}.${ext}"
     }
   },
   "scripts": {
