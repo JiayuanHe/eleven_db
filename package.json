@@ -54,7 +54,7 @@
     },
     "linux": {
       "target": ["dir"],
-      "icon": ["resources/icon.png"],
+      "icon": "resources/icon.png",
       "artifactName": "${productName}-${version}.${ext}"
     }
   },
