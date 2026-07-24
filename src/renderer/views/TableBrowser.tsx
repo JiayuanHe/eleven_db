@@ -91,8 +91,13 @@ export function TableBrowser(props: Props): JSX.Element {
     return withAdvanced(combined, advanced);
   }, [clauses, advanced]);
 
+  // 待删除行集合（点击“删除”后累积，保留到 reload）
+  // 区分原因：用户可能勾选后点击“删除”→ 状态变 pendingDelete；勾选取消后 selected 变，
+  //           但 pendingDelete 仍保留删除意图。
+  const [pendingDelete, setPendingDelete] = useState<Set<number>>(new Set());
+
   // 待提交总变更数
-  const pendingCount = changes.size + pendingInserts.length + selected.size;
+  const pendingCount = changes.size + pendingInserts.length + pendingDelete.size;
 
   const reload = async (overrideWhere?: string) => {
     setLoading(true);
@@ -100,6 +105,7 @@ export function TableBrowser(props: Props): JSX.Element {
     setChanges(new Map());
     setSelected(new Set());
     setPendingInserts([]);
+    setPendingDelete(new Set());
     try {
       const cols = await call<TableColumn[]>(
         window.api.table.schema(props.conn.id, props.database, props.table),
@@ -175,38 +181,58 @@ export function TableBrowser(props: Props): JSX.Element {
   };
 
   // ---------- 选中 ----------
-  // selected 累积语义：一旦勾选就作为“待删除”标记，保留到 reload。
-  // 这样用户取消勾选 checkbox 不会撤销删除意图。
-  // checkbox 状态与 selected 完全同步（被勾选 → 一直勾选）。
+  // selected = 复选框当前状态（双向 toggle，UI 同步）
+  // pendingDelete = 待删除行集合（点击“删除”后累积，保留到 reload）—— 定义在前面
   const onSelectRow = (rowIndex: number, sel: boolean) => {
-    if (!sel) return; // 取消勾选不删除标记
     setSelected((prev) => {
       const next = new Set(prev);
-      next.add(rowIndex);
+      if (sel) next.add(rowIndex); else next.delete(rowIndex);
       return next;
     });
   };
   const onSelectAll = (sel: boolean) => {
     if (!result) return;
-    if (sel) {
-      setSelected((prev) => {
-        const next = new Set(prev);
-        for (let i = 0; i < result.rows.length; i++) next.add(i);
-        return next;
-      });
-    }
-    // 取消全选也不撤销删除意图
+    if (sel) setSelected(new Set(result.rows.map((_, i) => i)));
+    else setSelected(new Set());
   };
+
   /**
-   * 显式撤销一个“待删除”标记（用于在 reload 之前撤销某个删除意图）
+   * “删除”按钮：把当前勾选行加入 pendingDelete（累积语义）
+   * 取消勾选不影响 pendingDelete；只有 reload 或退出表才清除
+   */
+  const onMarkDelete = () => {
+    if (selected.size === 0) {
+      toast.push('请先勾选要删除的行', 'info');
+      return;
+    }
+    if (pks.length === 0) {
+      toast.push('该表无主键，无法安全生成 DELETE', 'error');
+      return;
+    }
+    setPendingDelete((prev) => {
+      const next = new Set(prev);
+      for (const i of selected) next.add(i);
+      return next;
+    });
+    setSelected(new Set());
+    toast.push(`已标记 ${selected.size} 行待删除（勾选框已清空，标记会保留到刷新）`, 'info');
+  };
+
+  /**
+   * 显式撤销某个待删除标记（用于在 reload 前撤销某个特定删除）
    */
   const unmarkDelete = (rowIndex: number) => {
-    setSelected((prev) => {
+    setPendingDelete((prev) => {
       const next = new Set(prev);
       next.delete(rowIndex);
       return next;
     });
   };
+
+  /**
+   * 清除所有待删除
+   */
+  const clearPendingDelete = () => setPendingDelete(new Set());
 
   // ---------- 提交 ----------
   /**
@@ -264,14 +290,15 @@ export function TableBrowser(props: Props): JSX.Element {
       items.push({ op: 'UPDATE', sql });
     }
 
-    // 3) DELETE
-    if (selected.size > 0 && pks.length === 0) {
+    // 3) DELETE（基于 pendingDelete，积累语义，勾选取消不影响）
+    if (pendingDelete.size > 0 && pks.length === 0) {
       toast.push('该表无主键，无法安全生成 DELETE', 'error');
       return null;
     }
-    if (selected.size > 0 && !result) return null;
-    for (const idx of selected) {
+    if (pendingDelete.size > 0 && !result) return null;
+    for (const idx of pendingDelete) {
       if (!result) continue;
+      if (idx >= result.rows.length) continue; // 安全检查
       const original = result.rows[idx];
       const pk = Object.fromEntries(pks.map((k) => [k, original[k]]));
       const whereSql = Object.keys(pk)
@@ -349,7 +376,7 @@ export function TableBrowser(props: Props): JSX.Element {
   };
 
   const onDeleteSelected = () => {
-    // 保留为兼容。 selected 现在是累积语义，不需要额外点击标记。
+    // 已被 onMarkDelete 取代，保留仅为兼容。
   };
 
   // ---------- 条件区 handler ----------
@@ -407,13 +434,22 @@ export function TableBrowser(props: Props): JSX.Element {
         </button>
         <button onClick={() => reload(composedWhere)}>刷新</button>
         <button
-          onClick={() => setSelected(new Set())}
+          onClick={onMarkDelete}
           disabled={selected.size === 0}
           className="danger-ghost"
-          title="清空所有待删除标记（刷新也会清空）"
+          title="把当前勾选行标记为待删除（即使取消勾选也保留）"
         >
-          清除删除 ({selected.size})
+          删除 ({selected.size})
         </button>
+        {pendingDelete.size > 0 && (
+          <button
+            onClick={clearPendingDelete}
+            className="danger-ghost"
+            title="清空所有待删除标记"
+          >
+            清除删除 ({pendingDelete.size})
+          </button>
+        )}
         <div className="export-wrap" style={{ position: 'relative' }}>
           <button onClick={(e) => { e.stopPropagation(); setShowExportMenu((v) => !v); }}>导出 ▾</button>
           {showExportMenu && (
