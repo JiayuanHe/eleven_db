@@ -6,7 +6,6 @@
   "author": "",
   "license": "MIT",
   "private": true,
-  "type": "module",
   "build": {
     "appId": "com.eleven.db",
     "productName": "Eleven DB",
