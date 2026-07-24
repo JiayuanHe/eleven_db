@@ -363,6 +363,45 @@ input:hover, select:hover { border-color: var(--line-strong); }
 
 /* ===== Schema tree ===== */
 .schema-tree { padding: 4px; }
+
+/* ===== Connection tree：隐藏连接区 ===== */
+.tree-hidden-section {
+  margin-top: 8px;
+  border-top: 1px dashed var(--line);
+  padding-top: 6px;
+}
+.tree-hidden-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--t-fast);
+}
+.tree-hidden-toggle:hover { background: var(--bg-2); }
+.tree-hidden-toggle .caret { font-size: 10px; }
+.tree-hidden-toggle button {
+  margin-left: auto;
+  padding: 1px 8px;
+  font-size: 10px;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid transparent;
+}
+.tree-hidden-toggle button:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.tree-row-hidden {
+  opacity: 0.6;
+}
+.tree-row-hidden .name {
+  text-decoration: line-through;
+  text-decoration-color: var(--muted);
+}
 .schema-empty {
   padding: 16px;
   color: var(--muted);
