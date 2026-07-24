@@ -80,7 +80,6 @@
     "eleven": "bin/eleven-cli.js"
   },
   "dependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.62.2",
     "@tauri-apps/api": "^2.1.1",
     "@tauri-apps/plugin-dialog": "^2.2.0",
     "@tauri-apps/plugin-fs": "^2.2.0",
@@ -89,6 +88,7 @@
     "mysql2": "^3.11.0"
   },
   "devDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.62.2",
     "@tauri-apps/cli": "^2.1.0",
     "@types/node": "^22.7.0",
     "@types/react": "^18.3.11",
