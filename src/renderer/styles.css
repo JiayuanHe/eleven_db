@@ -1800,3 +1800,58 @@ input[type='radio'] {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
+
+/* ===== Review Dialog（SQL 预览确认） ===== */
+.rev-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.rev-row {
+  cursor: pointer;
+  transition: background var(--t-fast);
+}
+.rev-row:hover { background: var(--bg-2); }
+.rev-row-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+}
+.rev-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--radius-xs);
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+  min-width: 40px;
+  text-align: center;
+}
+.rev-sql-preview {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rev-toggle {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.rev-sql-detail {
+  margin: 0;
+  padding: 8px 18px 14px 60px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg-2);
+  white-space: pre-wrap;
+  word-break: break-all;
+  border-top: 1px dashed var(--line);
+}

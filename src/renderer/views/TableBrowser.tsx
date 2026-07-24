@@ -3,6 +3,7 @@ import type { ConnectionConfig, QueryResult, TableColumn } from '../../shared/ty
 import { call, toast } from '../lib/api';
 import { ResultTable, CellChange, PendingRow } from '../components/ResultTable';
 import { PaginationIcon } from '../components/PaginationIcon';
+import { ReviewDialog, ReviewSqlItem } from '../components/ReviewDialog';
 import { toCsv } from '../lib/csv';
 import {
   OPERATORS,
@@ -188,70 +189,119 @@ export function TableBrowser(props: Props): JSX.Element {
   };
 
   // ---------- 提交 ----------
-  const onCommit = async () => {
-    if (pendingCount === 0) return toast.push('没有变更', 'info');
-
+  /**
+   * 从 pendingInserts / changes / selected 构建 CommitRow[] 和对应的 SQL 预览
+   */
+  const buildReview = (): { rows: any[]; items: ReviewSqlItem[] } | null => {
     const rows: any[] = [];
+    const items: ReviewSqlItem[] = [];
+    const fullName = `\`${props.database}\`.\`${props.table}\``;
 
     // 1) INSERT
     for (const ins of pendingInserts) {
+      const cols = Object.keys(ins.data);
+      if (cols.length === 0) {
+        // 跳过完全空的插入行
+        continue;
+      }
+      const colList = cols.map((c) => `\`${c}\``).join(', ');
+      const vals = cols.map((c) => {
+        const v = ins.data[c];
+        if (v === null || v === undefined) return 'NULL';
+        if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+        if (typeof v === 'boolean') return v ? '1' : '0';
+        return `'${String(v).replace(/'/g, "''")}'`;
+      });
       rows.push({ op: 'insert', data: ins.data });
+      items.push({
+        op: 'INSERT',
+        sql: `INSERT INTO ${fullName} (${colList}) VALUES\n  (${vals.join(', ')});`,
+      });
     }
 
     // 2) UPDATE
     if (changes.size > 0 && pks.length === 0) {
-      return toast.push('该表无主键，无法安全生成 UPDATE', 'error');
+      toast.push('该表无主键，无法安全生成 UPDATE', 'error');
+      return null;
     }
-    if (changes.size > 0 && !result) return;
+    if (changes.size > 0 && !result) return null;
     for (const [rowIndex, arr] of changes) {
       if (!result) continue;
       const original = result.rows[rowIndex];
       const data: Record<string, unknown> = {};
       for (const ch of arr) data[ch.column] = ch.newValue;
-      rows.push({
-        op: 'update',
-        data,
-        pk: Object.fromEntries(pks.map((k) => [k, original[k]])),
-      });
+      const pk = Object.fromEntries(pks.map((k) => [k, original[k]]));
+
+      const setSql = Object.keys(data)
+        .map((c) => `  \`${c}\` = ${sqlValue(data[c])}`)
+        .join(',\n');
+      const whereSql = Object.keys(pk)
+        .map((c) => `  \`${c}\` = ${sqlValue(pk[c])}`)
+        .join(' AND ');
+      const sql = `UPDATE ${fullName}\nSET\n${setSql}\nWHERE ${whereSql};`;
+
+      rows.push({ op: 'update', data, pk });
+      items.push({ op: 'UPDATE', sql });
     }
 
     // 3) DELETE
     if (selected.size > 0 && pks.length === 0) {
-      return toast.push('该表无主键，无法安全生成 DELETE', 'error');
+      toast.push('该表无主键，无法安全生成 DELETE', 'error');
+      return null;
     }
-    if (selected.size > 0 && !result) return;
+    if (selected.size > 0 && !result) return null;
     for (const idx of selected) {
       if (!result) continue;
       const original = result.rows[idx];
-      rows.push({
-        op: 'delete',
-        data: {},
-        pk: Object.fromEntries(pks.map((k) => [k, original[k]])),
-      });
+      const pk = Object.fromEntries(pks.map((k) => [k, original[k]]));
+      const whereSql = Object.keys(pk)
+        .map((c) => `  \`${c}\` = ${sqlValue(pk[c])}`)
+        .join(' AND ');
+      const sql = `DELETE FROM ${fullName}\nWHERE ${whereSql};`;
+
+      rows.push({ op: 'delete', data: {}, pk });
+      items.push({ op: 'DELETE', sql });
     }
 
-    if (rows.length === 0) return;
+    return { rows, items };
+  };
 
+  /** Review 对话框：显示所有即将执行的 SQL */
+  const [review, setReview] = useState<{ items: ReviewSqlItem[]; rows: any[] } | null>(null);
+  const [committing, setCommitting] = useState(false);
+
+  const onCommit = () => {
+    if (pendingCount === 0) return toast.push('没有变更', 'info');
+    const r = buildReview();
+    if (!r) return;
+    if (r.rows.length === 0) return toast.push('没有可提交的变更', 'info');
+    setReview({ items: r.items, rows: r.rows });
+  };
+
+  /** 用户在 Review 对话框点击"确认执行" */
+  const onConfirmCommit = async () => {
+    if (!review) return;
+    setCommitting(true);
     try {
       await call(
         window.api.table.commit({
           id: props.conn.id,
           database: props.database,
           table: props.table,
-          rows,
+          rows: review.rows,
         }),
       );
       const parts: string[] = [];
-      const insN = pendingInserts.length;
-      const updN = changes.size;
-      const delN = selected.size;
-      if (insN) parts.push(`新增 ${insN}`);
-      if (updN) parts.push(`更新 ${updN}`);
-      if (delN) parts.push(`删除 ${delN}`);
+      if (pendingInserts.length) parts.push(`新增 ${pendingInserts.length}`);
+      if (changes.size) parts.push(`更新 ${changes.size}`);
+      if (selected.size) parts.push(`删除 ${selected.size}`);
       toast.push(`已提交：${parts.join('、')}`, 'success');
+      setReview(null);
       reload();
     } catch (e) {
       toast.push((e as Error).message, 'error');
+    } finally {
+      setCommitting(false);
     }
   };
 
@@ -619,6 +669,25 @@ export function TableBrowser(props: Props): JSX.Element {
           );
         })()}
       </div>
+
+      {review && (
+        <ReviewDialog
+          database={props.database}
+          table={props.table}
+          items={review.items}
+          busy={committing}
+          onCancel={() => setReview(null)}
+          onConfirm={onConfirmCommit}
+        />
+      )}
     </div>
   );
+}
+
+/** 将 JS 值转成 SQL 字面量 */
+function sqlValue(v: unknown): string {
+  if (v === null || v === undefined) return 'NULL';
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  if (typeof v === 'boolean') return v ? '1' : '0';
+  return `'${String(v).replace(/'/g, "''")}'`;
 }
