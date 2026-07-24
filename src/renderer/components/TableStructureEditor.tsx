@@ -93,28 +93,32 @@ export function TableStructureEditor(props: Props): JSX.Element {
     return rows.filter((r) => isDirty(r));
   }, [rows, props.detail.fields]);
 
+  // 可见行（不含被删除的）—— 用于错误提示和显示行号
+  const visibleRows = useMemo(() => rows.filter((r) => !r.state._deleted), [rows]);
+
   const valid = useMemo(() => {
     if (rows.some((r) => r.state._deleted || r.state._isNew)) {
       // add / drop 期间，主键的“是否变化”交给用户自己调整
     }
     // 检查是否有字段没填名字
-    for (const r of rows) {
+    for (const r of visibleRows) {
       if (!r.state.name.trim()) {
-        return { ok: false, msg: `字段名不能为空：第 ${rows.indexOf(r) + 1} 行` };
+        const displayIdx = visibleRows.indexOf(r) + 1;
+        return { ok: false, msg: `字段名不能为空：第 ${displayIdx} 行` };
       }
     }
     // 检查重复名
-    const names = rows.filter((r) => !r.state._deleted).map((r) => r.state.name);
+    const names = visibleRows.map((r) => r.state.name);
     const dup = names.find((n, i) => names.indexOf(n) !== i);
     if (dup) return { ok: false, msg: `字段名重复：${dup}` };
     // 类型不能空
-    for (const r of rows) {
-      if (!r.state._deleted && !r.state.rawType.trim()) {
-        return { ok: false, msg: `类型不能为空：${r.state.name}` };
+    for (const r of visibleRows) {
+      if (!r.state.rawType.trim()) {
+        return { ok: false, msg: `类型不能为空：${r.state.name || '（未命名）'}` };
       }
     }
     // 多主键提示
-    const pkCount = rows.filter((r) => !r.state._deleted && r.state.isPrimary).length;
+    const pkCount = visibleRows.filter((r) => r.state.isPrimary).length;
     if (pkCount > 1) {
       return { ok: false, msg: '当前仅支持单字段主键；请只勾选一个主键' };
     }
@@ -352,7 +356,9 @@ export function TableStructureEditor(props: Props): JSX.Element {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => (
+            {rows.map((r, _i) => {
+              const displayIdx = r.state._deleted ? -1 : visibleRows.indexOf(r) + 1;
+              return (
               <tr
                 key={r.key}
                 data-tse-key={r.key}
@@ -366,7 +372,7 @@ export function TableStructureEditor(props: Props): JSX.Element {
                         : ''
                 }
               >
-                <td className="muted">{i + 1}</td>
+                <td className="muted">{displayIdx > 0 ? displayIdx : '—'}</td>
                 <td>
                   <input
                     value={r.state.name}
@@ -426,7 +432,8 @@ export function TableStructureEditor(props: Props): JSX.Element {
                   </button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
