@@ -23,8 +23,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: |
-          npm install --prefer-offline --no-audit
+        run: npm install --prefer-offline --no-audit
 
       - name: Build main process
         run: npm run build:main
@@ -32,11 +31,14 @@ jobs:
       - name: Build renderer
         run: npm run build:renderer
 
-      - name: Build Windows
-        run: npx electron-builder --win --x64
+      - name: Build Windows NSIS
+        run: npx electron-builder --win nsis --x64 --publish never
+
+      - name: Build Windows Portable
+        run: npx electron-builder --win portable --x64 --publish never
 
       - name: List output files
-        run: ls -la release/*.exe 2>/dev/null || dir /b release\\*.exe
+        run: ls -la release/*.exe
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
