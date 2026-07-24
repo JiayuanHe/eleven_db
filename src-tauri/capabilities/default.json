@@ -1,0 +1,17 @@
+{
+  "$schema": "https://v2.tauri.app/schemas/capabilities.schema.json",
+  "identifier": "default",
+  "description": "Default capabilities for Eleven DB",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "dialog:allow-save",
+    "dialog:allow-open",
+    "dialog:allow-message",
+    "dialog:allow-ask",
+    "dialog:allow-confirm",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file"
+  ]
+}

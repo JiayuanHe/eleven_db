@@ -1,11 +1,47 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 dist/
-*.log
-.DS_Store
+release/
+out/
+
+# Rust build artifacts
+src-tauri/target/
+Cargo.lock
+*.rs.bk
+
+# IDE
 .vscode/
 .idea/
-out/
-release/
-data/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System files
+.DS_Store
+Thumbs.db
+
+# TypeScript
 *.tsbuildinfo
-.cache/main.js
+
+# Tauri
+src-tauri/**/*.pdb
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+coverage/
+
+# Temp files
+*.tmp
+.cache/

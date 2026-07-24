@@ -6,6 +6,7 @@
   "author": "",
   "license": "MIT",
   "private": true,
+  "type": "module",
   "build": {
     "appId": "com.eleven.db",
     "productName": "Eleven DB",
@@ -65,17 +66,27 @@
     "pack": "npm run build && electron-builder --dir",
     "dist:win": "npm run build && electron-builder --win nsis --x64",
     "dist:portable": "npm run build && electron-builder --win portable --x64",
-    "dist:all": "npm run build && electron-builder --win nsis portable --x64"
+    "dist:all": "npm run build && electron-builder --win nsis portable --x64",
+    
+    "# Tauri scripts",
+    "tauri:dev": "npm run build:renderer && tauri dev",
+    "tauri:build": "npm run build:renderer && tauri build",
+    "tauri:build:debug": "npm run build:renderer && tauri build --debug"
   },
   "bin": {
     "eleven": "bin/eleven-cli.js"
   },
   "dependencies": {
     "@rollup/rollup-linux-x64-gnu": "^4.62.2",
+    "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/plugin-dialog": "^2.2.0",
+    "@tauri-apps/plugin-fs": "^2.2.0",
+    "@tauri-apps/plugin-shell": "^2.2.0",
     "ioredis": "^5.4.1",
     "mysql2": "^3.11.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
     "@types/node": "^22.7.0",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",

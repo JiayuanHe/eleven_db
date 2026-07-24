@@ -1,0 +1,62 @@
+[package]
+name = "eleven-db"
+version = "0.1.0"
+edition = "2021"
+description = "Lightweight cross-platform database client"
+authors = ["Eleven DB Team"]
+license = "MIT"
+
+[lib]
+name = "eleven_db_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "eleven-db"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = "2"
+
+[dependencies]
+# Tauri
+tauri = { version = "2", features = ["devtools"] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Database drivers
+mysql_async = "0.35"
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+
+# Redis
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager", "cluster", "sentinel"] }
+
+# UUID
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Date/Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# Encryption (for password storage)
+base64 = "0.22"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Foundation"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "3"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

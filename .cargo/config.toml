@@ -1,0 +1,18 @@
+# Build configuration
+[build]
+# Disable cross-compile warnings
+target-dir = "src-tauri/target"
+
+[net]
+# Use git to fetch crates
+git-fetch-with-cli = true
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+opt-level = "s"  # Optimize for size
+lto = true
+codegen-units = 1
+strip = true
