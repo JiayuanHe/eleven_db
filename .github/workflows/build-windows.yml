@@ -24,8 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm config set registry https://registry.npmmirror.com
-          npm install --loglevel=verbose
+          npm install --prefer-offline --no-audit
 
       - name: Build main process
         run: npm run build:main
