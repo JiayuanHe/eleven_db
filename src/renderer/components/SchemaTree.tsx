@@ -314,29 +314,82 @@ export function SchemaTree(props: Props): JSX.Element {
                   filtered.length === 0 ? (
                     <div className="schema-empty small">无匹配表</div>
                   ) : (
-                    filtered.map((obj) => (
-                      <div
-                        key={`${db.name}.${obj.name}`}
-                        className="table"
-                        onClick={() => (props as any).onSelectTable(db.name, obj.name)}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          setCtx({ x: e.clientX, y: e.clientY, db: db.name, obj });
-                        }}
-                        title={obj.name}
-                      >
-                        <SchemaIcon
-                          kind={
-                            obj.type === 'view' ? 'view' :
-                            obj.type === 'procedure' ? 'procedure' :
-                            obj.type === 'function' ? 'function' :
-                            'table'
-                          }
-                          className={`icon-${obj.type}`}
-                        />
-                        {obj.name}
-                      </div>
-                    ))
+                    <>
+                      {(() => {
+                        // 按类型分组：表 / 视图 / 存储过程 / 函数
+                        const tables = filtered.filter((o) => o.type === 'table');
+                        const views = filtered.filter((o) => o.type === 'view');
+                        const procs = filtered.filter((o) => o.type === 'procedure');
+                        const funcs = filtered.filter((o) => o.type === 'function');
+                        const renderItem = (obj: typeof tables[number]) => (
+                          <div
+                            key={`${db.name}.${obj.name}`}
+                            className="table"
+                            onClick={() => (props as any).onSelectTable(db.name, obj.name)}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              setCtx({ x: e.clientX, y: e.clientY, db: db.name, obj });
+                            }}
+                            title={obj.name}
+                          >
+                            <SchemaIcon
+                              kind={
+                                obj.type === 'view' ? 'view' :
+                                obj.type === 'procedure' ? 'procedure' :
+                                obj.type === 'function' ? 'function' :
+                                'table'
+                              }
+                              className={`icon-${obj.type}`}
+                            />
+                            {obj.name}
+                          </div>
+                        );
+                        return (
+                          <>
+                            {tables.length > 0 && (
+                              <GroupFolder
+                                kind="table"
+                                title="表"
+                                count={tables.length}
+                                defaultOpen
+                              >
+                                {tables.map(renderItem)}
+                              </GroupFolder>
+                            )}
+                            {views.length > 0 && (
+                              <GroupFolder
+                                kind="view"
+                                title="视图"
+                                count={views.length}
+                                defaultOpen={false}
+                              >
+                                {views.map(renderItem)}
+                              </GroupFolder>
+                            )}
+                            {procs.length > 0 && (
+                              <GroupFolder
+                                kind="procedure"
+                                title="存储过程"
+                                count={procs.length}
+                                defaultOpen={false}
+                              >
+                                {procs.map(renderItem)}
+                              </GroupFolder>
+                            )}
+                            {funcs.length > 0 && (
+                              <GroupFolder
+                                kind="function"
+                                title="函数"
+                                count={funcs.length}
+                                defaultOpen={false}
+                              >
+                                {funcs.map(renderItem)}
+                              </GroupFolder>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </>
                   )
                 )}
 
@@ -479,6 +532,34 @@ function countAllKeys(nodes: RedisKeyNode[]): number {
     else if (node.children) n += countAllKeys(node.children);
   }
   return n;
+}
+
+/**
+ * 分组文件夹：按类型（表/视图/存储过程/函数）分组展示
+ * 独立可折叠，默认表打开，其他折叠
+ */
+function GroupFolder(props: {
+  kind: 'table' | 'view' | 'procedure' | 'function';
+  title: string;
+  count: number;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}): JSX.Element {
+  const [open, setOpen] = useState(props.defaultOpen ?? false);
+  return (
+    <div className="schema-group">
+      <div
+        className="schema-group-header"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className={`caret ${open ? 'open' : ''}`}>▸</span>
+        <SchemaIcon kind={props.kind} className={`icon-${props.kind}`} />
+        <span className="schema-group-title">{props.title}</span>
+        <span className="badge">{props.count}</span>
+      </div>
+      {open && <div className="schema-group-body">{props.children}</div>}
+    </div>
+  );
 }
 
 /**

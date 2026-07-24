@@ -364,6 +364,44 @@ input:hover, select:hover { border-color: var(--line-strong); }
 /* ===== Schema tree ===== */
 .schema-tree { padding: 4px; }
 
+/* ===== Schema tree：分组文件夹 ===== */
+.schema-group {
+  margin-top: 2px;
+}
+.schema-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  transition: background var(--t-fast);
+}
+.schema-group-header:hover { background: var(--bg-2); }
+.schema-group-header .caret {
+  font-size: 10px;
+  color: var(--muted);
+  width: 10px;
+  flex-shrink: 0;
+}
+.schema-group-title { flex-shrink: 0; }
+.schema-group-header .badge {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--bg-2);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.schema-group-body {
+  margin-left: 14px;
+  border-left: 1px solid var(--line);
+  padding-left: 4px;
+}
+
 /* ===== Schema tree：脚本区 ===== */
 .schema-script-section {
   margin-top: 4px;
